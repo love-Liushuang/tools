@@ -97,6 +97,22 @@ a {
   color: #4b6480;
 }
 
+.pageNotice {
+  margin-bottom: 16px;
+}
+
+.pageNotice .gonghuiLogo {
+  margin: 0 auto;
+  display: block;
+}
+
+.pageNotice .notice {
+  color: #5b5144;
+  font-size: 20px;
+  text-align: center;
+  line-height: 35px;
+}
+
 .featured-block {
   margin-bottom: 16px;
   padding: 16px;

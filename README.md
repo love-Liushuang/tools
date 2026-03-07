@@ -18,6 +18,7 @@ npm run dev
 - `/tools/base64`：Base64 编解码
 - `/tools/text-stats`：文本统计
 - `/tools/text-letter`：文本加密为字母
+- `/tools/unlock-pdf`：PDF 解密
 
 ## 3. 生产运行
 

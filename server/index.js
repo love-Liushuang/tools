@@ -3,12 +3,13 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const { handleTextLetter } = require('./services/codecService');
+const { unlockPdfHandler } = require('./handlers/unlockPdfHandler');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const RATE_LIMIT_WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS || 60 * 1000);
 const RATE_LIMIT_MAX = Number(process.env.RATE_LIMIT_MAX || 60);
-const textLetterRateBuckets = new Map();
+const apiRateBuckets = new Map();
 
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
@@ -21,13 +22,13 @@ function getClientIp(req) {
   return req.socket?.remoteAddress || 'unknown';
 }
 
-function isTextLetterRateLimited(req) {
+function isRateLimited(req) {
   const now = Date.now();
   const ip = getClientIp(req);
-  const item = textLetterRateBuckets.get(ip);
+  const item = apiRateBuckets.get(ip);
 
   if (!item || now - item.start >= RATE_LIMIT_WINDOW_MS) {
-    textLetterRateBuckets.set(ip, { start: now, count: 1 });
+    apiRateBuckets.set(ip, { start: now, count: 1 });
     return false;
   }
 
@@ -35,11 +36,11 @@ function isTextLetterRateLimited(req) {
   return item.count > RATE_LIMIT_MAX;
 }
 
-function sweepTextLetterRateBuckets() {
+function sweepRateBuckets() {
   const now = Date.now();
-  for (const [ip, item] of textLetterRateBuckets.entries()) {
+  for (const [ip, item] of apiRateBuckets.entries()) {
     if (now - item.start >= RATE_LIMIT_WINDOW_MS) {
-      textLetterRateBuckets.delete(ip);
+      apiRateBuckets.delete(ip);
     }
   }
 }
@@ -59,8 +60,8 @@ app.post('/api/tools/text-stats', (req, res) => {
 });
 
 app.post('/api/text-letter', async (req, res) => {
-  sweepTextLetterRateBuckets();
-  if (isTextLetterRateLimited(req)) {
+  sweepRateBuckets();
+  if (isRateLimited(req)) {
     res.setHeader('Retry-After', '60');
     return res.status(429).json({ ok: false, error: '请求过于频繁，请稍后再试' });
   }
@@ -71,6 +72,15 @@ app.post('/api/text-letter', async (req, res) => {
   } catch (err) {
     res.status(400).json({ ok: false, error: err.message || '请求失败' });
   }
+});
+
+app.post('/api/unlock-pdf', async (req, res) => {
+  sweepRateBuckets();
+  if (isRateLimited(req)) {
+    res.setHeader('Retry-After', '60');
+    return res.status(429).json({ ok: false, error: '请求过于频繁，请稍后再试' });
+  }
+  await unlockPdfHandler(req, res);
 });
 
 const distPath = path.join(__dirname, '..', 'client', 'dist');
