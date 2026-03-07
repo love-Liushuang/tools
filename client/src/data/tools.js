@@ -1,6 +1,6 @@
 export const categories = [
   { key: 'all', label: '全部工具' },
-  { key: 'dev', label: '开发常用' },
+  { key: 'dev', label: '开发工具' },
   { key: 'text', label: '文本处理' },
   { key: 'encode', label: '编码转换' }
 ];
@@ -28,3 +28,5 @@ export const tools = [
     path: '/tools/text-stats'
   }
 ];
+
+export const featuredToolIds = ['json-formatter', 'base64', 'text-stats'];
