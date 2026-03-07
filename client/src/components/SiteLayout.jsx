@@ -15,6 +15,7 @@ function SiteLayout() {
             <NavLink to="/tools/json-formatter">JSON</NavLink>
             <NavLink to="/tools/base64">Base64</NavLink>
             <NavLink to="/tools/text-stats">文本统计</NavLink>
+            <NavLink to="/tools/text-letter">文本加密</NavLink>
           </nav>
         </header>
         <Outlet />

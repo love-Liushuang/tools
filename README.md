@@ -17,6 +17,7 @@ npm run dev
 - `/tools/json-formatter`：JSON 格式化
 - `/tools/base64`：Base64 编解码
 - `/tools/text-stats`：文本统计
+- `/tools/text-letter`：文本加密为字母
 
 ## 3. 生产运行
 

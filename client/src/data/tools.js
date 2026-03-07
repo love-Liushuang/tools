@@ -26,7 +26,14 @@ export const tools = [
     desc: '调用后端 API 统计字数、字符数、行数。',
     category: 'text',
     path: '/tools/text-stats'
+  },
+  {
+    id: 'text-letter',
+    name: '文本加密为字母',
+    desc: '调用后端 API 在文本与字母密文之间转换。',
+    category: 'text',
+    path: '/tools/text-letter'
   }
 ];
 
-export const featuredToolIds = ['json-formatter', 'base64', 'text-stats'];
+export const featuredToolIds = ['text-letter'];
