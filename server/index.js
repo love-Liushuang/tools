@@ -6,7 +6,7 @@ const { handleTextLetter } = require('./services/codecService');
 const { unlockPdfHandler } = require('./handlers/unlockPdfHandler');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.SERVICE_PORT || process.env.PORT || 3000);
 const RATE_LIMIT_WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS || 60 * 1000);
 const RATE_LIMIT_MAX = Number(process.env.RATE_LIMIT_MAX || 60);
 const apiRateBuckets = new Map();
@@ -19,7 +19,7 @@ function getClientIp(req) {
   if (typeof forwarded === 'string' && forwarded.trim()) {
     return forwarded.split(',')[0].trim();
   }
-  return req.socket?.remoteAddress || 'unknown';
+  return (req.socket && req.socket.remoteAddress) || 'unknown';
 }
 
 function isRateLimited(req) {
@@ -50,7 +50,7 @@ app.get('/api/health', (req, res) => {
 });
 
 app.post('/api/tools/text-stats', (req, res) => {
-  const text = typeof req.body?.text === 'string' ? req.body.text : '';
+  const text = req.body && typeof req.body.text === 'string' ? req.body.text : '';
   const trimmed = text.trim();
   const words = trimmed ? trimmed.split(/\s+/).length : 0;
   const chars = text.length;

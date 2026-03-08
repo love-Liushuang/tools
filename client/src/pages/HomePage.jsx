@@ -35,7 +35,7 @@ function HomePage() {
       <section className="hero-block">
         <p className="hero-tag">在线工具导航</p>
         <h1>一站式实用工具箱</h1>
-        <p className="hero-desc">像 uuTool 一样按分类浏览，点击即用，不需要登录。</p>
+        <p className="hero-desc">按分类浏览，点击即用，不需要登录。</p>
       </section>
 
       {featuredTools.length ? (
