@@ -355,6 +355,72 @@ pre {
   word-break: break-all;
 }
 
+.img-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.field-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-weight: 600;
+  color: #274a6d;
+}
+
+.field-block input,
+.field-block select {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid #cfdced;
+  padding: 10px;
+  font-size: 14px;
+  background: #fff;
+  color: #19304a;
+}
+
+.status-text {
+  margin: 12px 0 0;
+  color: #2b628f;
+}
+
+.file-summary {
+  margin: 12px 0 0;
+  color: #4f6882;
+}
+
+.result-list {
+  margin-top: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.result-item {
+  border: 1px solid #dbe8f5;
+  border-radius: 10px;
+  background: #f8fbff;
+  padding: 12px;
+}
+
+.result-item h4 {
+  margin: 0;
+  color: #1e4f7a;
+}
+
+.result-item p {
+  margin: 8px 0 0;
+  color: #516a85;
+}
+
+.result-item a {
+  display: inline-block;
+  margin-top: 10px;
+  color: #1161b4;
+  text-decoration: none;
+  font-weight: 600;
+}
+
 .notfound {
   padding: 30px;
   text-align: center;

@@ -1,5 +1,6 @@
 export const categories = [
     { key: 'all', label: '全部工具' },
+    { key: 'image', label: '图片处理' },
     { key: 'text', label: '文本处理' },
     { key: 'wps', label: 'WPS' },
     { key: 'encode', label: '编码转换' },
@@ -41,7 +42,14 @@ export const tools = [
         desc: '上传 PDF，去限制并下载。',
         category: 'wps',
         path: '/tools/unlock-pdf'
+    },
+    {
+        id: 'image-convert',
+        name: '在线图片转换',
+        desc: '支持 WebP/PNG/JPG 批量转换与尺寸限制。',
+        category: 'image',
+        path: '/tools/image-convert'
     }
 ];
 
-export const featuredToolIds = ['text-letter', 'unlock-pdf'];
+export const featuredToolIds = ['text-letter', 'unlock-pdf', 'image-convert'];

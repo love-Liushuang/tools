@@ -19,6 +19,7 @@ npm run dev
 - `/tools/text-stats`：文本统计
 - `/tools/text-letter`：文本加密为字母
 - `/tools/unlock-pdf`：PDF 解密
+- `/tools/image-convert`：在线图片转换
 
 ## 3. 生产运行
 

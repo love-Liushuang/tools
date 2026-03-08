@@ -5,7 +5,6 @@ import icon2 from '../assets/unlock-pdf/icon2.jpg';
 import icon3 from '../assets/unlock-pdf/icon3.jpg';
 import icon4 from '../assets/unlock-pdf/icon4.jpg';
 import pdfFileImage from '../assets/unlock-pdf/PDF_file.webp';
-import gonghuiLogo from '../assets/gonghui_logo.webp';
 import PageNotice from '../components/PageNotice';
 import './UnlockPdfPage.css';
 
@@ -92,54 +91,7 @@ function UnlockPdfPage() {
   const [messageType, setMessageType] = useState('error');
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const DEFAULT_FAVICON = '/favicon.ico';
-    const head = document.head;
-
-    let iconEl = document.querySelector('link[rel="icon"]');
-    if (!iconEl) {
-      iconEl = document.createElement('link');
-      iconEl.setAttribute('rel', 'icon');
-      head.appendChild(iconEl);
-    }
-
-    let shortcutEl = document.querySelector('link[rel="shortcut icon"]');
-    if (!shortcutEl) {
-      shortcutEl = document.createElement('link');
-      shortcutEl.setAttribute('rel', 'shortcut icon');
-      head.appendChild(shortcutEl);
-    }
-
-    const previousIcon = {
-      href: iconEl.getAttribute('href') || DEFAULT_FAVICON,
-      type: iconEl.getAttribute('type')
-    };
-    const previousShortcut = {
-      href: shortcutEl.getAttribute('href') || previousIcon.href || DEFAULT_FAVICON,
-      type: shortcutEl.getAttribute('type')
-    };
-
-    iconEl.setAttribute('type', 'image/webp');
-    iconEl.setAttribute('href', gonghuiLogo);
-    shortcutEl.setAttribute('type', 'image/webp');
-    shortcutEl.setAttribute('href', gonghuiLogo);
-
-    return () => {
-      iconEl.setAttribute('href', previousIcon.href || DEFAULT_FAVICON);
-      if (previousIcon.type) {
-        iconEl.setAttribute('type', previousIcon.type);
-      } else {
-        iconEl.removeAttribute('type');
-      }
-
-      shortcutEl.setAttribute('href', previousShortcut.href || previousIcon.href || DEFAULT_FAVICON);
-      if (previousShortcut.type) {
-        shortcutEl.setAttribute('type', previousShortcut.type);
-      } else {
-        shortcutEl.removeAttribute('type');
-      }
-    };
-  }, []);
+  
 
   const setInfo = (msg) => {
     setMessage(msg || '');

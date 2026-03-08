@@ -6,6 +6,7 @@ import Base64Page from './pages/Base64Page';
 import TextStatsPage from './pages/TextStatsPage';
 import TextLetterPage from './pages/TextLetterPage';
 import UnlockPdfPage from './pages/UnlockPdfPage';
+import ImageConvertPage from './pages/ImageConvertPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 function App() {
@@ -24,6 +25,7 @@ function App() {
           <Route path="tools/text-stats" element={<TextStatsPage />} />
           <Route path="tools/text-letter" element={<TextLetterPage />} />
           <Route path="tools/unlock-pdf" element={<UnlockPdfPage />} />
+          <Route path="tools/image-convert" element={<ImageConvertPage />} />
           <Route path="tools" element={<Navigate to="/" replace />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
