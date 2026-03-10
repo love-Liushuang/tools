@@ -45,3 +45,16 @@ npm start
 │  └─ index.js            # Node/Express 后端
 └─ package.json           # 根脚本（统一启动）
 ```
+
+## 部署说明（摘要）
+
+- 1、在本地构建前端：`npm run build`
+- 2、打包项目目录
+  - client/dist/*
+  - server/*
+  - package.json
+  - package-lock.json
+- 3、上传压缩包到服务器 scp -P 27458 /Users/liushuang/Desktop/131417tools.zip root@138.128.221.244:/var/www/bookbook/data/www/tools.131417.net
+- 4、在服务器上进行提取
+- 5、服务器上运行 npm install(一次)
+- 6、控制面板 -> tools.131417.net -> Services -> 重启 VIRTUALHOST_SERVICES.ACTION.RESTART
