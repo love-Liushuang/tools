@@ -20,6 +20,7 @@ function SiteLayout() {
             <NavLink to="/tools/unlock-pdf">PDF解密</NavLink>
             <NavLink to="/tools/image-convert">图片转换</NavLink>
             <NavLink to="/tools/svg-base64">SVG Base64</NavLink>
+            <NavLink to="/tools/svg-path">SVG Path</NavLink>
           </nav>
         </header>
         <Outlet />

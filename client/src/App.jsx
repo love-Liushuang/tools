@@ -9,6 +9,7 @@ import TextDiffPage from './pages/TextDiffPage';
 import UnlockPdfPage from './pages/UnlockPdfPage';
 import ImageConvertPage from './pages/ImageConvertPage';
 import SvgBase64Page from './pages/SvgBase64Page';
+import SvgPathPage from './pages/SvgPathPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 function App() {
@@ -26,6 +27,8 @@ function App() {
           <Route path="PDF解密" element={<Navigate to="/tools/unlock-pdf" replace />} />
           <Route path="svg-base64" element={<Navigate to="/tools/svg-base64" replace />} />
           <Route path="SVG转Base64" element={<Navigate to="/tools/svg-base64" replace />} />
+          <Route path="svg-path" element={<Navigate to="/tools/svg-path" replace />} />
+          <Route path="SVG路径预览" element={<Navigate to="/tools/svg-path" replace />} />
           <Route path="tools/json-formatter" element={<JsonFormatterPage />} />
           <Route path="tools/base64" element={<Base64Page />} />
           <Route path="tools/text-stats" element={<TextStatsPage />} />
@@ -34,6 +37,7 @@ function App() {
           <Route path="tools/unlock-pdf" element={<UnlockPdfPage />} />
           <Route path="tools/image-convert" element={<ImageConvertPage />} />
           <Route path="tools/svg-base64" element={<SvgBase64Page />} />
+          <Route path="tools/svg-path" element={<SvgPathPage />} />
           <Route path="tools" element={<Navigate to="/" replace />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>

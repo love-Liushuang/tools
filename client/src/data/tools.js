@@ -63,6 +63,13 @@ export const tools = [
         desc: '将 SVG 转为 Base64 / Data URI，并支持预览与复制。',
         category: 'image',
         path: '/tools/svg-base64'
+    },
+    {
+        id: 'svg-path',
+        name: 'SVG Path 预览',
+        desc: '粘贴 path 的 d 或 <path>，自动计算 viewBox 并预览。',
+        category: 'image',
+        path: '/tools/svg-path'
     }
 ];
 

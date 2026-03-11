@@ -562,6 +562,101 @@ pre {
   padding: 12px 14px 14px;
 }
 
+.svgpath-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 12px;
+}
+
+.svgpath-toolbar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.svgpath-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.svgpath-hint {
+  margin: 8px 0 0;
+  color: #6d88a5;
+  font-size: 13px;
+}
+
+.svgpath-meta {
+  margin: 10px 0 0;
+  color: #4f6882;
+}
+
+.svgpath-preview {
+  border: 1px solid #e2ebf5;
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.svgpath-preview-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, #f4f9ff 0%, #ffffff 72%);
+  border-bottom: 1px solid #eef4fb;
+}
+
+.svgpath-preview-title {
+  margin: 0;
+  font-weight: 700;
+  color: #274a6d;
+}
+
+.svgpath-preview-meta {
+  margin: 0;
+  color: #6d88a5;
+  font-size: 13px;
+}
+
+.svgpath-canvas {
+  padding: 12px;
+  background: radial-gradient(circle at 10% 10%, #f1f9ff 0, transparent 35%),
+    radial-gradient(circle at 90% 15%, #f0fff4 0, transparent 40%),
+    linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+}
+
+.svgpath-canvas svg {
+  display: block;
+  width: 100%;
+  border-radius: 10px;
+  border: 1px dashed #d7e4f2;
+  background: #fff;
+}
+
+.svgpath-panel {
+  border-top: 1px solid #eef4fb;
+  background: #fff;
+}
+
+.svgpath-panel summary {
+  cursor: pointer;
+  padding: 12px 14px;
+  font-weight: 700;
+  color: #274a6d;
+  list-style: none;
+}
+
+.svgpath-panel summary::-webkit-details-marker {
+  display: none;
+}
+
+.svgpath-panel-body {
+  padding: 0 14px 14px;
+}
+
 .diff-input-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
