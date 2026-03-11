@@ -355,6 +355,116 @@ pre {
   word-break: break-all;
 }
 
+.diff-input-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.diff-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.diff-summary {
+  margin: 12px 0 0;
+  color: #4f6882;
+}
+
+.diff-table {
+  margin-top: 10px;
+  border: 1px solid #dbe8f5;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.diff-table-head {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: #f4f9ff;
+  border-bottom: 1px solid #e2ebf5;
+}
+
+.diff-side-title {
+  padding: 10px 12px;
+  font-weight: 700;
+  color: #274a6d;
+}
+
+.diff-side-title + .diff-side-title {
+  border-left: 1px solid #e2ebf5;
+}
+
+.diff-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.diff-row + .diff-row {
+  border-top: 1px solid #eef4fb;
+}
+
+.diff-cell {
+  display: flex;
+  gap: 10px;
+  padding: 8px 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.diff-cell + .diff-cell {
+  border-left: 1px solid #eef4fb;
+}
+
+.diff-lineno {
+  flex: 0 0 44px;
+  text-align: right;
+  color: #8aa0b7;
+  user-select: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.diff-code {
+  flex: 1;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.diff-delete .diff-left {
+  background: #fff1f0;
+}
+
+.diff-insert .diff-right {
+  background: #f0fff4;
+}
+
+.diff-replace .diff-left {
+  background: #fff6f0;
+}
+
+.diff-replace .diff-right {
+  background: #f0fff4;
+}
+
+.diff-seg {
+  white-space: pre-wrap;
+}
+
+.seg-del {
+  background: #ffd6d4;
+  border-radius: 4px;
+  padding: 0 1px;
+}
+
+.seg-add {
+  background: #bff3c8;
+  border-radius: 4px;
+  padding: 0 1px;
+}
+
 .img-form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -442,5 +552,18 @@ pre {
 
   .tool-head {
     flex-direction: column;
+  }
+
+  .diff-table-head {
+    display: none;
+  }
+
+  .diff-row {
+    grid-template-columns: 1fr;
+  }
+
+  .diff-cell + .diff-cell {
+    border-left: 0;
+    border-top: 1px solid #eef4fb;
   }
 }

@@ -16,6 +16,7 @@ function SiteLayout() {
             <NavLink to="/tools/base64">Base64</NavLink>
             <NavLink to="/tools/text-stats">文本统计</NavLink>
             <NavLink to="/tools/text-letter">文本加密</NavLink>
+            <NavLink to="/tools/txt-diff">文本对比</NavLink>
             <NavLink to="/tools/unlock-pdf">PDF解密</NavLink>
             <NavLink to="/tools/image-convert">图片转换</NavLink>
           </nav>

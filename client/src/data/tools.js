@@ -37,6 +37,13 @@ export const tools = [
         path: '/tools/text-letter'
     },
     {
+        id: 'txt-diff',
+        name: '文本内容对比',
+        desc: '对比两段文本差异，支持行级高亮显示。',
+        category: 'text',
+        path: '/tools/txt-diff'
+    },
+    {
         id: 'unlock-pdf',
         name: 'PDF 解密',
         desc: '上传 PDF，去限制并下载。',

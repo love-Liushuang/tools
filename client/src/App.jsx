@@ -5,6 +5,7 @@ import JsonFormatterPage from './pages/JsonFormatterPage';
 import Base64Page from './pages/Base64Page';
 import TextStatsPage from './pages/TextStatsPage';
 import TextLetterPage from './pages/TextLetterPage';
+import TextDiffPage from './pages/TextDiffPage';
 import UnlockPdfPage from './pages/UnlockPdfPage';
 import ImageConvertPage from './pages/ImageConvertPage';
 import NotFoundPage from './pages/NotFoundPage';
@@ -17,6 +18,8 @@ function App() {
           <Route index element={<HomePage />} />
           <Route path="text-letter" element={<Navigate to="/tools/text-letter" replace />} />
           <Route path="文本加密为字母" element={<Navigate to="/tools/text-letter" replace />} />
+          <Route path="txt-diff" element={<Navigate to="/tools/txt-diff" replace />} />
+          <Route path="文本对比" element={<Navigate to="/tools/txt-diff" replace />} />
           <Route path="unlock-pdf" element={<Navigate to="/tools/unlock-pdf" replace />} />
           <Route path="pdf-unlock" element={<Navigate to="/tools/unlock-pdf" replace />} />
           <Route path="PDF解密" element={<Navigate to="/tools/unlock-pdf" replace />} />
@@ -24,6 +27,7 @@ function App() {
           <Route path="tools/base64" element={<Base64Page />} />
           <Route path="tools/text-stats" element={<TextStatsPage />} />
           <Route path="tools/text-letter" element={<TextLetterPage />} />
+          <Route path="tools/txt-diff" element={<TextDiffPage />} />
           <Route path="tools/unlock-pdf" element={<UnlockPdfPage />} />
           <Route path="tools/image-convert" element={<ImageConvertPage />} />
           <Route path="tools" element={<Navigate to="/" replace />} />
