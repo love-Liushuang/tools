@@ -56,6 +56,13 @@ export const tools = [
         desc: '支持 WebP/PNG/JPG 批量转换与尺寸限制。',
         category: 'image',
         path: '/tools/image-convert'
+    },
+    {
+        id: 'svg-base64',
+        name: 'SVG 转 Base64',
+        desc: '将 SVG 转为 Base64 / Data URI，并支持预览与复制。',
+        category: 'image',
+        path: '/tools/svg-base64'
     }
 ];
 
