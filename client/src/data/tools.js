@@ -70,6 +70,13 @@ export const tools = [
         desc: '粘贴 path 的 d 或 <path>，自动计算 viewBox 并预览。',
         category: 'image',
         path: '/tools/svg-path'
+    },
+    {
+        id: 'svg-preview',
+        name: 'SVG 图片预览',
+        desc: '粘贴/导入 SVG 代码，实时预览并支持下载。',
+        category: 'image',
+        path: '/tools/svg-preview'
     }
 ];
 

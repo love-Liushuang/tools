@@ -21,6 +21,7 @@ function SiteLayout() {
             <NavLink to="/tools/image-convert">图片转换</NavLink>
             <NavLink to="/tools/svg-base64">SVG Base64</NavLink>
             <NavLink to="/tools/svg-path">SVG Path</NavLink>
+            <NavLink to="/tools/svg-preview">SVG预览</NavLink>
           </nav>
         </header>
         <Outlet />
