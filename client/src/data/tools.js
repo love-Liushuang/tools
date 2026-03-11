@@ -9,9 +9,9 @@ export const categories = [
 
 export const tools = [
     {
-        id: 'json-formatter',
-        name: 'JSON 格式化',
-        desc: '支持格式化和压缩 JSON。',
+        id: 'json-formatter', // https://wejson.cn/
+        name: 'JSON 工具大全',
+        desc: '格式化/压缩/校验/排序/Tree/JSONPath/生成类型等。',
         category: 'dev',
         path: '/tools/json-formatter'
     },
