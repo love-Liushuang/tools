@@ -23,6 +23,13 @@ export const tools = [
         path: '/tools/base64'
     },
     {
+        id: 'file-encrypt',
+        name: '文件加密/解密（本地）',
+        desc: 'AES-256-GCM，本地浏览器加解密，不上传服务器。',
+        category: 'encode',
+        path: '/tools/file-encrypt'
+    },
+    {
         id: 'text-stats',
         name: '文本统计',
         desc: '统计字数、字符数、行数。',
@@ -80,4 +87,9 @@ export const tools = [
     }
 ];
 
-export const featuredToolIds = ['text-letter', 'unlock-pdf', 'image-convert'];
+export const featuredToolIds = [
+    'text-letter',
+    'unlock-pdf',
+    'image-convert',
+    'file-encrypt',
+];

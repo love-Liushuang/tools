@@ -11,6 +11,7 @@ import ImageConvertPage from './pages/ImageConvertPage';
 import SvgBase64Page from './pages/SvgBase64Page';
 import SvgPathPage from './pages/SvgPathPage';
 import SvgPreviewPage from './pages/SvgPreviewPage';
+import FileEncryptPage from './pages/FileEncryptPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 function App() {
@@ -35,6 +36,7 @@ function App() {
           <Route path="SVG图片预览" element={<Navigate to="/tools/svg-preview" replace />} />
           <Route path="tools/json-formatter" element={<JsonFormatterPage />} />
           <Route path="tools/base64" element={<Base64Page />} />
+          <Route path="tools/file-encrypt" element={<FileEncryptPage />} />
           <Route path="tools/text-stats" element={<TextStatsPage />} />
           <Route path="tools/text-letter" element={<TextLetterPage />} />
           <Route path="tools/txt-diff" element={<TextDiffPage />} />
