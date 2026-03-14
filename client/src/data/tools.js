@@ -30,6 +30,13 @@ export const tools = [
         path: '/tools/file-encrypt'
     },
     {
+        id: 'torrent-magnet',
+        name: 'Torrent 转磁力链接',
+        desc: '批量解析 .torrent 文件，生成磁力链接。',
+        category: 'encode',
+        path: '/tools/torrent-magnet'
+    },
+    {
         id: 'text-stats',
         name: '文本统计',
         desc: '统计字数、字符数、行数。',
@@ -88,6 +95,7 @@ export const tools = [
 ];
 
 export const featuredToolIds = [
+    'torrent-magnet',
     'text-letter',
     'unlock-pdf',
     'image-convert',

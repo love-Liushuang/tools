@@ -12,6 +12,7 @@ import SvgBase64Page from './pages/SvgBase64Page';
 import SvgPathPage from './pages/SvgPathPage';
 import SvgPreviewPage from './pages/SvgPreviewPage';
 import FileEncryptPage from './pages/FileEncryptPage';
+import TorrentMagnetPage from './pages/TorrentMagnetPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 function App() {
@@ -45,6 +46,7 @@ function App() {
           <Route path="tools/svg-base64" element={<SvgBase64Page />} />
           <Route path="tools/svg-path" element={<SvgPathPage />} />
           <Route path="tools/svg-preview" element={<SvgPreviewPage />} />
+          <Route path="tools/torrent-magnet" element={<TorrentMagnetPage />} />
           <Route path="tools" element={<Navigate to="/" replace />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
