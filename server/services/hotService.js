@@ -103,6 +103,36 @@ function makeItem(platform, payload) {
   };
 }
 
+function uniqueByKey(items) {
+  const map = new Map();
+  items.forEach((item) => {
+    if (!item || !item.key) {
+      return;
+    }
+    if (!map.has(item.key)) {
+      map.set(item.key, item);
+    }
+  });
+  return Array.from(map.values());
+}
+
+function uniqueByTitle(items) {
+  const map = new Map();
+  items.forEach((item) => {
+    if (!item || !item.title) {
+      return;
+    }
+    const key = String(item.title).trim().toLowerCase();
+    if (!key) {
+      return;
+    }
+    if (!map.has(key)) {
+      map.set(key, item);
+    }
+  });
+  return Array.from(map.values());
+}
+
 function toTrendScore(item) {
   if (Number.isFinite(item.hot)) {
     return item.hot;
@@ -398,9 +428,11 @@ async function getHotData(options = {}) {
     items = items.concat(entry.items);
   });
 
+  const deduped = uniqueByTitle(uniqueByKey(items));
+
   return {
     platforms,
-    items,
+    items: deduped,
     generatedAt: Date.now()
   };
 }
