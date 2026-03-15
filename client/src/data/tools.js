@@ -44,6 +44,13 @@ export const tools = [
         path: '/tools/text-stats'
     },
     {
+        id: 'markdown-editor',
+        name: 'Markdown 在线编辑器',
+        desc: '实时预览、导入导出、常用语法工具栏。',
+        category: 'text',
+        path: '/tools/markdown-editor'
+    },
+    {
         id: 'text-letter',
         name: '文本加密为字母',
         desc: '在文本与字母密文之间转换。',

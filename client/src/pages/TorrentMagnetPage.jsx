@@ -432,30 +432,30 @@ function TorrentMagnetPage() {
       {message ? <p className="tool-message">{message}</p> : null}
 
       {results.length ? (
-        <div className="result-list">
+        <div className="torrent-result-list">
           {results.map((item) => (
-            <div className="result-item" key={item.id}>
-              <div className="result-head">
+            <div className="torrent-result-item" key={item.id}>
+              <div className="torrent-result-head">
                 <div>
                   <h3>{item.displayName}</h3>
-                  <p className="result-sub">{item.fileName}</p>
+                  <p className="torrent-result-sub">{item.fileName}</p>
                 </div>
-                {item.metaText ? <span className="result-meta">{item.metaText}</span> : null}
+                {item.metaText ? <span className="torrent-result-meta">{item.metaText}</span> : null}
               </div>
 
               {item.error ? (
                 <p className="error">{item.error}</p>
               ) : (
                 <>
-                  <div className="result-row">
-                    <span className="result-label">磁力链接</span>
-                    <div className="result-code">{item.magnet}</div>
+                  <div className="torrent-result-row">
+                    <span className="torrent-result-label">磁力链接</span>
+                    <div className="torrent-result-code">{item.magnet}</div>
                   </div>
-                  <div className="result-row">
-                    <span className="result-label">InfoHash</span>
-                    <div className="result-code">{item.hash}</div>
+                  <div className="torrent-result-row">
+                    <span className="torrent-result-label">InfoHash</span>
+                    <div className="torrent-result-code">{item.hash}</div>
                   </div>
-                  <div className="result-actions">
+                  <div className="torrent-result-actions">
                     <button
                       type="button"
                       onClick={() => handleCopy(item.magnet, '磁力链接已复制。')}
