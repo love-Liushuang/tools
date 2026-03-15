@@ -14,6 +14,7 @@ import SvgPreviewPage from './pages/SvgPreviewPage';
 import FileEncryptPage from './pages/FileEncryptPage';
 import TorrentMagnetPage from './pages/TorrentMagnetPage';
 import MarkdownEditorPage from './pages/MarkdownEditorPage';
+import HotTrendsPage from './pages/HotTrendsPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 function App() {
@@ -49,6 +50,7 @@ function App() {
           <Route path="tools/svg-preview" element={<SvgPreviewPage />} />
           <Route path="tools/torrent-magnet" element={<TorrentMagnetPage />} />
           <Route path="tools/markdown-editor" element={<MarkdownEditorPage />} />
+          <Route path="hot" element={<HotTrendsPage />} />
           <Route path="tools" element={<Navigate to="/" replace />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>

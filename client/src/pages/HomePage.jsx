@@ -38,6 +38,17 @@ function HomePage() {
         <p className="hero-desc">按分类浏览，点击即用，不需要登录。</p>
       </section>
 
+      <section className="hot-entry">
+        <div>
+          <p className="hot-entry-tag">实时热点</p>
+          <h2>全网热点聚合</h2>
+          <p className="hot-entry-desc">聚合微博、知乎、抖音、百度、B站热榜，支持搜索、订阅与趋势曲线。</p>
+        </div>
+        <Link className="hot-entry-btn" to="/hot">
+          进入热点
+        </Link>
+      </section>
+
       {featuredTools.length ? (
         <section className="featured-block">
           <div className="featured-head">

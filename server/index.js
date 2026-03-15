@@ -3,6 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const { handleTextLetter } = require('./services/codecService');
+const { getHotData } = require('./services/hotService');
 const { unlockPdfHandler } = require('./handlers/unlockPdfHandler');
 
 const app = express();
@@ -81,6 +82,24 @@ app.post('/api/unlock-pdf', async (req, res) => {
     return res.status(429).json({ ok: false, error: '请求过于频繁，请稍后再试' });
   }
   await unlockPdfHandler(req, res);
+});
+
+app.get('/api/hot', async (req, res) => {
+  sweepRateBuckets();
+  if (isRateLimited(req)) {
+    res.setHeader('Retry-After', '60');
+    return res.status(429).json({ ok: false, error: '请求过于频繁，请稍后再试' });
+  }
+
+  try {
+    const data = await getHotData({
+      platform: req.query.platform,
+      force: req.query.force === '1'
+    });
+    res.json({ ok: true, ...data });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message || '热点获取失败' });
+  }
 });
 
 const distPath = path.join(__dirname, '..', 'client', 'dist');
