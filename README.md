@@ -49,33 +49,41 @@ npm start
 ```
 
 ## 部署说明（摘要）
+- 0、服务器基础依赖（一次）
+  - apt update
+  - apt install -y chromium fonts-noto-cjk
+  - 截图功能需要如下
+apt install -y \
+  libnss3 \
+  libatk1.0-0 \
+  libatk-bridge2.0-0 \
+  libcups2 \
+  libxkbcommon0 \
+  libxcomposite1 \
+  libxdamage1 \
+  libxrandr2 \
+  libgbm1 \
+  libasound2 \
+  libpangocairo-1.0-0 \
+  libpango-1.0-0 \
+  libcairo2 \
+  libgtk-3-0 \
+  libx11-xcb1 \
+  libxext6 \
+  libxfixes3 \
+  libxcb1 \
+  libx11-6 \
+  libglib2.0-0 \
+  fontconfig
 
 - 1、在本地构建前端：`npm run build`
 - 2、打包项目目录
   - client/dist/*
   - server/*
+  - .env
   - package.json
   - package-lock.json
 - 3、上传压缩包到服务器 scp -P 27458 /Users/liushuang/Desktop/131417tools.zip root@138.128.221.244:/var/www/bookbook/data/www/tools.131417.net
 - 4、在服务器上进行提取
 - 5、服务器上运行 npm install(一次)
-- 5.1、如果启用了网页截图功能，再运行 `npm run install:chrome`
 - 6、控制面板 -> tools.131417.net -> Services -> 重启 VIRTUALHOST_SERVICES.ACTION.RESTART
-
-## Puppeteer / Chrome 部署说明
-
-- 网页截图功能依赖 Puppeteer 对应版本的 Chrome for Testing。
-- 项目运行时默认把浏览器缓存放在项目目录下的 `.cache/puppeteer`。
-- 首次部署或清空缓存后，请在项目根目录执行：
-
-```bash
-npm run install:chrome
-```
-
-- 如果服务器已经安装了系统 Chrome，也可以设置环境变量：
-
-```bash
-PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
-```
-
-- 如果部署面板执行 `npm install` 时忽略了依赖脚本，截图接口会在运行时提示缺少 Chrome，此时手工执行上面的安装命令即可。
