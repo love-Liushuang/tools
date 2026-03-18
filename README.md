@@ -51,7 +51,7 @@ npm start
 ## 部署说明（摘要）
 - 0、服务器基础依赖（一次）
   - apt update
-  - apt install -y chromium fonts-noto-cjk
+  - apt install -y qpdf chromium fonts-noto-cjk
   - 截图功能需要如下
 apt install -y \
   libnss3 \
