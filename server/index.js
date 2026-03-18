@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const { handleTextLetter } = require('./services/codecService');
 const { getHotData } = require('./services/hotService');
+const { captureWebshot } = require('./services/webshotService');
 const { unlockPdfHandler } = require('./handlers/unlockPdfHandler');
 
 const app = express();
@@ -99,6 +100,24 @@ app.get('/api/hot', async (req, res) => {
     res.json({ ok: true, ...data });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message || '热点获取失败' });
+  }
+});
+
+app.post('/api/webshot', async (req, res) => {
+  sweepRateBuckets();
+  if (isRateLimited(req)) {
+    res.setHeader('Retry-After', '60');
+    return res.status(429).json({ ok: false, error: '请求过于频繁，请稍后再试' });
+  }
+
+  try {
+    const result = await captureWebshot(req.body || {});
+    res.setHeader('Content-Type', result.contentType);
+    res.setHeader('Content-Disposition', `attachment; filename=\"${result.filename}\"`);
+    res.setHeader('X-File-Name', result.filename);
+    res.send(result.buffer);
+  } catch (err) {
+    res.status(400).json({ ok: false, error: err.message || '截图失败' });
   }
 });
 

@@ -12,7 +12,9 @@
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.19.2",
-    "node-fetch": "^2.7.0"
+    "node-fetch": "^2.7.0",
+    "puppeteer": "^22.15.0",
+    "sharp": "^0.33.4"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",

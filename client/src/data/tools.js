@@ -98,6 +98,13 @@ export const tools = [
         desc: '粘贴/导入 SVG 代码，实时预览并支持下载。',
         category: 'image',
         path: '/tools/svg-preview'
+    },
+    {
+        id: 'webshot',
+        name: '网页整页截图',
+        desc: '输入网址，生成高清全页截图，支持 PNG/PDF 下载。',
+        category: 'image',
+        path: '/tools/webshot'
     }
 ];
 
@@ -107,4 +114,5 @@ export const featuredToolIds = [
     'unlock-pdf',
     'image-convert',
     'file-encrypt',
+    'webshot',
 ];

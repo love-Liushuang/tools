@@ -534,6 +534,228 @@ a {
   border-radius: 12px;
 }
 
+.webshot-shell {
+  display: grid;
+  gap: 14px;
+}
+
+.webshot-form {
+  display: grid;
+  gap: 14px;
+}
+
+.webshot-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.webshot-row-primary {
+  grid-template-columns: minmax(420px, 2.4fr) repeat(3, minmax(150px, 1fr));
+  align-items: end;
+}
+
+.webshot-row-secondary {
+  grid-template-columns: repeat(2, minmax(180px, 1fr)) minmax(260px, 1.1fr);
+}
+
+.webshot-field-wide {
+  min-width: 0;
+}
+
+.webshot-shell select,
+.webshot-shell input[type="number"] {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid #cfdced;
+  padding: 10px;
+  font-size: 14px;
+  background: #fff;
+}
+
+.webshot-width-panel {
+  display: grid;
+  grid-template-columns: minmax(132px, 148px) minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  border: 1px solid #dbe8f5;
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at top left, rgba(109, 167, 255, 0.14), transparent 38%),
+    linear-gradient(180deg, #fafdff 0%, #f4f9ff 100%);
+  padding: 8px;
+}
+
+.webshot-width-input {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid #c9dcf3;
+  border-radius: 12px;
+  background: #fff;
+  padding: 4px 4px 4px 10px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  min-height: 46px;
+  box-sizing: border-box;
+}
+
+.webshot-width-input input[type="number"] {
+  border: 0;
+  padding: 8px 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.webshot-width-input input[type="number"]:focus {
+  outline: none;
+}
+
+.webshot-width-unit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 46px;
+  border-radius: 9px;
+  background: #e9f2ff;
+  color: #28537e;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 10px;
+}
+
+.webshot-presets {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #c4d7ec transparent;
+  padding-bottom: 2px;
+}
+
+.webshot-presets::-webkit-scrollbar {
+  height: 6px;
+}
+
+.webshot-presets::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #c4d7ec;
+}
+
+.webshot-chip {
+  flex: 0 0 auto;
+  border: 1px solid #d7e4f2;
+  background: linear-gradient(180deg, #ffffff 0%, #f5faff 100%);
+  color: #4f6882;
+  border-radius: 999px;
+  padding: 7px 11px;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, transform 140ms ease;
+}
+
+.webshot-chip:hover {
+  border-color: #b9d2f0;
+  color: #244a72;
+  transform: translateY(-1px);
+}
+
+.webshot-chip.is-active {
+  border-color: #6da7ff;
+  background: linear-gradient(180deg, #eef5ff 0%, #dceafe 100%);
+  color: #204a7a;
+  box-shadow: 0 8px 18px rgba(109, 167, 255, 0.16);
+}
+
+.webshot-toggle {
+  align-self: center;
+}
+
+.webshot-toggle-card {
+  align-self: end;
+  height: 40px;
+  border: 1px solid #dbe8f5;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #fafdff 0%, #f4f9ff 100%);
+  padding: 0 12px;
+  box-sizing: border-box;
+}
+
+.webshot-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.webshot-tip {
+  margin: 0;
+  color: #6a829b;
+  font-size: 12px;
+}
+
+.webshot-result {
+  border: 1px solid #e2ebf5;
+  border-radius: 12px;
+  background: #fff;
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.webshot-result-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.webshot-meta {
+  margin-top: 4px;
+  color: #6a829b;
+  font-size: 12px;
+}
+
+.webshot-preview {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid #e2ebf5;
+}
+
+.webshot-pdf {
+  padding: 16px;
+  background: #f8fbff;
+  border: 1px dashed #d7e4f2;
+  border-radius: 10px;
+  color: #6a829b;
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .webshot-row-primary,
+  .webshot-row-secondary {
+    grid-template-columns: 1fr;
+  }
+
+  .webshot-width-panel {
+    grid-template-columns: 1fr;
+  }
+}
+
+.webshot-notice {
+  font-size: 12px;
+  color: #6a829b;
+  background: #f8fbff;
+  border-radius: 10px;
+  border: 1px solid #e2ebf5;
+  padding: 10px;
+}
+
 .tool-embed-shell {
   margin: -14px;
   border-radius: 12px;
