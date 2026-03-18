@@ -1,5 +1,15 @@
+const fs = require('fs');
 const dns = require('dns').promises;
+const path = require('path');
+
+const DEFAULT_BROWSER_CACHE_DIR = path.resolve(__dirname, '..', '..', '.cache', 'puppeteer');
+if (!process.env.PUPPETEER_CACHE_DIR) {
+  process.env.PUPPETEER_CACHE_DIR = DEFAULT_BROWSER_CACHE_DIR;
+}
+
 const puppeteer = require('puppeteer');
+const { Browser, install } = require('@puppeteer/browsers');
+const { PUPPETEER_REVISIONS } = require('puppeteer-core/lib/cjs/puppeteer/revisions.js');
 const sharp = require('sharp');
 
 const DEFAULT_VIEWPORT = {
@@ -22,8 +32,10 @@ const UA_STRING =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36';
 const MOBILE_UA =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1';
+const CHROME_BUILD_ID = PUPPETEER_REVISIONS.chrome;
 
 let browserPromise;
+let browserInstallPromise;
 
 function clampNumber(value, min, max, fallback) {
   const parsed = Number(value);
@@ -103,10 +115,89 @@ async function assertPublicHost(url) {
   }
 }
 
+function getBrowserCacheDir() {
+  return path.resolve(process.env.PUPPETEER_CACHE_DIR || DEFAULT_BROWSER_CACHE_DIR);
+}
+
+function getConfiguredBrowserPath() {
+  const candidate =
+    process.env.PUPPETEER_EXECUTABLE_PATH ||
+    process.env.CHROME_PATH ||
+    process.env.GOOGLE_CHROME_BIN;
+  return typeof candidate === 'string' && candidate.trim() ? candidate.trim() : '';
+}
+
+function createBrowserSetupError(message, cause) {
+  const details = cause && cause.message ? ` 原始错误：${cause.message}` : '';
+  return new Error(
+    `${message}。请先在项目根目录执行 \`npm run install:chrome\` 下载 Chrome，当前缓存目录为 ${getBrowserCacheDir()}。` +
+      '如果服务器已经安装了系统 Chrome，也可以设置环境变量 PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable。' +
+      details
+  );
+}
+
+function getBundledExecutablePath() {
+  try {
+    return puppeteer.executablePath();
+  } catch {
+    return '';
+  }
+}
+
+async function installBundledBrowser() {
+  const cacheDir = getBrowserCacheDir();
+  fs.mkdirSync(cacheDir, { recursive: true });
+
+  try {
+    const installed = await install({
+      browser: Browser.CHROME,
+      buildId: CHROME_BUILD_ID,
+      cacheDir
+    });
+    return installed.executablePath;
+  } catch (err) {
+    throw createBrowserSetupError(`自动下载 Chrome ${CHROME_BUILD_ID} 失败`, err);
+  }
+}
+
+async function resolveBrowserExecutablePath() {
+  const configuredPath = getConfiguredBrowserPath();
+  if (configuredPath) {
+    if (!fs.existsSync(configuredPath)) {
+      throw createBrowserSetupError(`配置的 Chrome 路径不存在：${configuredPath}`);
+    }
+    return configuredPath;
+  }
+
+  const bundledPath = getBundledExecutablePath();
+  if (bundledPath && fs.existsSync(bundledPath)) {
+    return bundledPath;
+  }
+
+  if (process.env.WEBSHOT_AUTO_INSTALL_BROWSER === '0') {
+    throw createBrowserSetupError(`未找到 Puppeteer 需要的 Chrome ${CHROME_BUILD_ID}`);
+  }
+
+  if (!browserInstallPromise) {
+    browserInstallPromise = installBundledBrowser().finally(() => {
+      browserInstallPromise = null;
+    });
+  }
+
+  return browserInstallPromise;
+}
+
 async function getBrowser() {
   if (!browserPromise) {
-    browserPromise = puppeteer.launch({
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    browserPromise = (async () => {
+      const executablePath = await resolveBrowserExecutablePath();
+      return puppeteer.launch({
+        executablePath,
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+      });
+    })().catch((err) => {
+      browserPromise = null;
+      throw err;
     });
   }
   return browserPromise;
