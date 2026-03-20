@@ -105,6 +105,13 @@ export const tools = [
         desc: '输入网址，生成高清全页截图，支持 PNG/PDF 下载。',
         category: 'image',
         path: '/tools/webshot'
+    },
+    {
+        id: 'md5',
+        name: 'MD5 校验工具',
+        desc: '在线计算文本的 MD5 哈希值，支持快速复制。',
+        category: 'encode',
+        path: '/tools/md5'
     }
 ];
 

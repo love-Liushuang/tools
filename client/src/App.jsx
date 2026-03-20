@@ -16,6 +16,7 @@ import FileEncryptPage from './pages/FileEncryptPage';
 import TorrentMagnetPage from './pages/TorrentMagnetPage';
 import MarkdownEditorPage from './pages/MarkdownEditorPage';
 import HotTrendsPage from './pages/HotTrendsPage';
+import Md5Page from './pages/Md5Page';
 import NotFoundPage from './pages/NotFoundPage';
 
 function App() {
@@ -52,6 +53,7 @@ function App() {
           <Route path="tools/webshot" element={<WebshotPage />} />
           <Route path="tools/torrent-magnet" element={<TorrentMagnetPage />} />
           <Route path="tools/markdown-editor" element={<MarkdownEditorPage />} />
+          <Route path="tools/md5" element={<Md5Page />} />
           <Route path="hot" element={<HotTrendsPage />} />
           <Route path="tools" element={<Navigate to="/" replace />} />
           <Route path="*" element={<NotFoundPage />} />
