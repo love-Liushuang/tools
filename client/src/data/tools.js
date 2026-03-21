@@ -108,8 +108,8 @@ export const tools = [
     },
     {
         id: 'md5',
-        name: 'MD5 校验工具',
-        desc: '在线计算文本的 MD5 哈希值，支持快速复制。',
+        name: '文件 MD5 批量计算',
+        desc: '纯本地批量计算文件 MD5，支持拖拽、多选和复制结果。',
         category: 'encode',
         path: '/tools/md5'
     }
