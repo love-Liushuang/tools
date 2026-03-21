@@ -322,7 +322,7 @@ function Md5Page() {
             <div className="md5-badge">Pure Local</div>
             <h2>拖入多个文件，直接在本地批量计算 MD5</h2>
             <p>
-              支持多文件队列、分块读取、大文件计算和一键复制结果。整个过程都在浏览器里完成，不消耗服务器流量。
+              支持多文件队列、分块读取、大文件计算和一键复制结果，整个过程都在本地完成。
             </p>
             <div className="md5-hero-points">
               <span>批量多选</span>
