@@ -120,6 +120,13 @@ export const tools = [
         desc: '全量 Emoji，支持中文搜索、分组浏览和点击复制。',
         category: 'emoji',
         path: '/tools/emoji'
+    },
+    {
+        id: 'emoji-topics',
+        name: 'Emoji 专题合集',
+        desc: '按节日、场景和内容主题整理 Emoji，适合运营与设计快速取用。',
+        category: 'emoji',
+        path: '/tools/emoji/topics'
     }
 ];
 

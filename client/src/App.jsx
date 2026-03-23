@@ -18,6 +18,8 @@ import MarkdownEditorPage from './pages/MarkdownEditorPage';
 import HotTrendsPage from './pages/HotTrendsPage';
 import Md5Page from './pages/Md5Page';
 import EmojiListPage from './pages/EmojiListPage';
+import EmojiTopicsPage from './pages/EmojiTopicsPage';
+import EmojiTopicDetailPage from './pages/EmojiTopicDetailPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 function App() {
@@ -56,6 +58,8 @@ function App() {
           <Route path="tools/markdown-editor" element={<MarkdownEditorPage />} />
           <Route path="tools/md5" element={<Md5Page />} />
           <Route path="tools/emoji" element={<EmojiListPage />} />
+          <Route path="tools/emoji/topics" element={<EmojiTopicsPage />} />
+          <Route path="tools/emoji/topics/:topicId" element={<EmojiTopicDetailPage />} />
           <Route path="hot" element={<HotTrendsPage />} />
           <Route path="tools" element={<Navigate to="/" replace />} />
           <Route path="*" element={<NotFoundPage />} />

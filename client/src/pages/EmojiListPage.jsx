@@ -1,35 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import ToolPageShell from '../components/ToolPageShell';
-
-function normalizeText(value) {
-  return String(value || '')
-    .normalize('NFKC')
-    .replace(/[\uFE0E\uFE0F]/g, '')
-    .replace(/\u200D/g, '')
-    .trim()
-    .toLowerCase();
-}
-
-function formatNumber(value) {
-  return Number(value || 0).toLocaleString('zh-CN');
-}
-
-async function copyText(text) {
-  if (navigator.clipboard && window.isSecureContext) {
-    await navigator.clipboard.writeText(text);
-    return;
-  }
-
-  const textarea = document.createElement('textarea');
-  textarea.value = text;
-  textarea.setAttribute('readonly', 'readonly');
-  textarea.style.position = 'fixed';
-  textarea.style.top = '-9999px';
-  document.body.appendChild(textarea);
-  textarea.select();
-  document.execCommand('copy');
-  textarea.remove();
-}
+import {
+  copyEmojiText,
+  createEmojiItems,
+  formatEmojiNumber,
+  loadEmojiDataset,
+  normalizeEmojiText
+} from '../lib/emojiUtils';
 
 function EmojiListPage() {
   const [dataset, setDataset] = useState(null);
@@ -48,8 +26,7 @@ function EmojiListPage() {
       setLoadError('');
 
       try {
-        const module = await import('../data/emojiData.json');
-        const nextDataset = module.default || module;
+        const nextDataset = await loadEmojiDataset();
         if (cancelled) {
           return;
         }
@@ -89,30 +66,10 @@ function EmojiListPage() {
   }, [statusText]);
 
   const items = useMemo(() => {
-    if (!dataset?.items) {
-      return [];
-    }
-
-    return dataset.items.map((item) => ({
-      ...item,
-      displayName: item.zhName || item.name,
-      searchIndex: normalizeText([
-        item.emoji,
-        item.emoji.replace(/[\uFE0E\uFE0F]/g, ''),
-        item.code,
-        item.code.replaceAll('-', ''),
-        item.name,
-        item.zhName,
-        ...(item.keywordsZh || []),
-        item.group,
-        item.groupLabel,
-        item.subgroup,
-        item.subgroupLabel
-      ].join(' '))
-    }));
+    return createEmojiItems(dataset);
   }, [dataset]);
 
-  const normalizedSearch = useMemo(() => normalizeText(searchText), [searchText]);
+  const normalizedSearch = useMemo(() => normalizeEmojiText(searchText), [searchText]);
 
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
@@ -192,7 +149,7 @@ function EmojiListPage() {
     }
 
     try {
-      await copyText(text);
+      await copyEmojiText(text);
       setLoadError('');
       setStatusText(message);
     } catch (error) {
@@ -209,17 +166,17 @@ function EmojiListPage() {
         <div className="emoji-hero">
           <div>
             <div className="emoji-kicker">Unicode Emoji</div>
-            <div className="emoji-kicker">Version: 17.0</div>
+            <div className="emoji-kicker">Version: {dataset?.meta?.version || '17.0'}</div>
             <h2>全量 Emoji 清单</h2>
             <p>
-              页面支持按分组浏览、中文关键词搜索和点击复制。
+              页面支持按分组浏览、中文关键词搜索、点击复制，也可以继续进入专题合集按场景挑选。
             </p>
           </div>
 
           <div className="emoji-stats-grid">
             <div className="emoji-stat-card">
               <span>Emoji 总数</span>
-              <strong>{formatNumber(dataset?.meta?.total)}</strong>
+              <strong>{formatEmojiNumber(dataset?.meta?.total)}</strong>
             </div>
             <div className="emoji-stat-card">
               <span>Unicode 版本</span>
@@ -227,11 +184,11 @@ function EmojiListPage() {
             </div>
             <div className="emoji-stat-card">
               <span>当前结果</span>
-              <strong>{formatNumber(filteredItems.length)}</strong>
+              <strong>{formatEmojiNumber(filteredItems.length)}</strong>
             </div>
             <div className="emoji-stat-card">
               <span>分组数量</span>
-              <strong>{formatNumber(groups.length)}</strong>
+              <strong>{formatEmojiNumber(groups.length)}</strong>
             </div>
           </div>
         </div>
@@ -248,6 +205,9 @@ function EmojiListPage() {
           </label>
 
           <div className="emoji-toolbar-actions">
+            <Link className="ghost-btn" to="/tools/emoji/topics">
+              专题合集
+            </Link>
             <button
               type="button"
               className="btn-ghost"
@@ -269,7 +229,7 @@ function EmojiListPage() {
             onClick={() => setActiveGroup('all')}
           >
             全部
-            <span>{formatNumber(dataset?.meta?.total)}</span>
+            <span>{formatEmojiNumber(dataset?.meta?.total)}</span>
           </button>
           {groups.map((group) => (
             <button
@@ -279,7 +239,7 @@ function EmojiListPage() {
               onClick={() => setActiveGroup(group.key)}
             >
               {group.label}
-              <span>{formatNumber(group.count)}</span>
+              <span>{formatEmojiNumber(group.count)}</span>
             </button>
           ))}
         </div>
@@ -346,7 +306,7 @@ function EmojiListPage() {
                     <h3>{section.label}</h3>
                     <p>{section.key}</p>
                   </div>
-                  <span>{formatNumber(section.count)} 个</span>
+                  <span>{formatEmojiNumber(section.count)} 个</span>
                 </div>
 
                 <div className="emoji-grid">
