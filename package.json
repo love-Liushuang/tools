@@ -6,6 +6,7 @@
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
     "dev:server": "nodemon server/index.js",
     "dev:client": "npm --prefix client run dev",
+    "generate:emoji": "node scripts/generate-emoji-data.mjs",
     "build": "npm --prefix client run build",
     "start": "node server/index.js"
   },

@@ -4,6 +4,7 @@ export const categories = [
     { key: 'text', label: '文本处理' },
     { key: 'wps', label: 'WPS' },
     { key: 'encode', label: '编码转换' },
+    { key: 'emoji', label: 'Emoji 表情' },
     { key: 'dev', label: '开发工具' },
 ];
 
@@ -112,6 +113,13 @@ export const tools = [
         desc: '纯本地批量计算文件 MD5，支持拖拽、多选和复制结果。',
         category: 'encode',
         path: '/tools/md5'
+    },
+    {
+        id: 'emoji-list',
+        name: 'Emoji 全量列表',
+        desc: '全量 Emoji，支持中文搜索、分组浏览和点击复制。',
+        category: 'emoji',
+        path: '/tools/emoji'
     }
 ];
 
