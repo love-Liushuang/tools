@@ -13,6 +13,7 @@ function EmojiListPage() {
   const [dataset, setDataset] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const [searchText, setSearchText] = useState('');
   const [activeGroup, setActiveGroup] = useState('all');
   const [selectedCode, setSelectedCode] = useState('');
@@ -121,6 +122,11 @@ function EmojiListPage() {
 
   const groups = dataset?.groups || [];
 
+  const handleSearchSubmit = (event) => {
+    event.preventDefault();
+    setSearchText(searchInput.trim());
+  };
+
   useEffect(() => {
     if (!filteredItems.length) {
       return;
@@ -194,15 +200,26 @@ function EmojiListPage() {
         </div>
 
         <div className="emoji-toolbar">
-          <label className="field-block emoji-search-field">
-            <span>搜索 Emoji</span>
-            <input
-              type="text"
-              placeholder="搜索表情、中文名称、英文名称、关键词或编码..."
-              value={searchText}
-              onChange={(event) => setSearchText(event.target.value)}
-            />
-          </label>
+          <form className="emoji-search-form" onSubmit={handleSearchSubmit}>
+            <label className="field-block emoji-search-field">
+              <span>搜索 Emoji</span>
+              <div className="emoji-search-input-row">
+                <input
+                  type="text"
+                  placeholder="搜索表情、中文名称、英文名称、关键词或编码..."
+                  value={searchInput}
+                  onChange={(event) => setSearchInput(event.target.value)}
+                />
+                <button
+                  type="submit"
+                  className="primary emoji-search-submit"
+                  disabled={searchInput.trim() === searchText}
+                >
+                  搜索
+                </button>
+              </div>
+            </label>
+          </form>
 
           <div className="emoji-toolbar-actions">
             <Link className="ghost-btn" to="/tools/emoji/topics">
@@ -212,10 +229,11 @@ function EmojiListPage() {
               type="button"
               className="btn-ghost"
               onClick={() => {
+                setSearchInput('');
                 setSearchText('');
                 setActiveGroup('all');
               }}
-              disabled={!searchText && activeGroup === 'all'}
+              disabled={!searchInput && !searchText && activeGroup === 'all'}
             >
               重置筛选
             </button>

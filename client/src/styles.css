@@ -2187,6 +2187,22 @@ pre {
   min-width: 0;
 }
 
+.emoji-search-form {
+  min-width: 0;
+}
+
+.emoji-search-input-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.emoji-search-submit {
+  min-width: 88px;
+  white-space: nowrap;
+}
+
 .emoji-toolbar-actions {
   display: flex;
   flex-wrap: wrap;
@@ -2596,6 +2612,10 @@ button:disabled {
 
   .emoji-stats-grid {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .emoji-search-input-row {
+    grid-template-columns: 1fr;
   }
 
   .emoji-focus-actions {
