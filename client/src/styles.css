@@ -2335,7 +2335,7 @@ pre {
 .emoji-back-to-top {
   position: fixed;
   right: 28px;
-  bottom: 28px;
+  bottom: 128px;
   z-index: 30;
   border-radius: 999px;
   padding: 10px 16px;
@@ -2504,6 +2504,19 @@ pre {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+.emoji-load-more-btn {
+  border-color: #ffb56d;
+  background: linear-gradient(135deg, #fff2df 0%, #ffe1b8 100%);
+  color: #a65400;
+  font-weight: 700;
+  box-shadow: 0 10px 20px rgba(255, 166, 77, 0.14);
+}
+
+.emoji-load-more-btn:hover {
+  border-color: #ff9a34;
+  background: linear-gradient(135deg, #ffe9cb 0%, #ffd69d 100%);
 }
 
 .emoji-topic-shell {
@@ -2708,12 +2721,6 @@ button:disabled {
   }
 
   .toast-item {
-    padding: 10px 14px;
-  }
-
-  .emoji-back-to-top {
-    right: 16px;
-    bottom: 16px;
     padding: 10px 14px;
   }
 

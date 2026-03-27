@@ -105,7 +105,7 @@ const EmojiSection = memo(function EmojiSection({
             {remainingCount > 0 ? (
               <button
                 type="button"
-                className="btn-ghost"
+                className="btn-ghost emoji-load-more-btn"
                 onClick={handleLoadMore}
               >
                 继续加载 {formatEmojiNumber(nextLoadCount)} 个
@@ -447,12 +447,6 @@ function EmojiListPage() {
             </button>
           ))}
         </div>
-
-        {!loading && activeGroup === 'all' && !!filteredItems.length ? (
-          <div className="emoji-performance-note">
-            全部分组默认按分段展示，点击“继续加载”或“只看本组”查看更多，减少长列表卡顿。
-          </div>
-        ) : null}
 
         {loading ? <p className="tool-message">正在加载 Emoji 数据...</p> : null}
         {loadError ? <p className="error">{loadError}</p> : null}
