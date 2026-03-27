@@ -2299,10 +2299,43 @@ pre {
   justify-content: flex-end;
 }
 
+.toast-viewport {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  z-index: 50;
+  width: min(92vw, 420px);
+  display: grid;
+  gap: 10px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.toast-item {
+  width: 100%;
+  padding: 10px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 14px;
+  background: rgba(23, 45, 69, 0.96);
+  color: #fff;
+  box-shadow: 0 16px 34px rgba(18, 52, 87, 0.24);
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.toast-item.is-error {
+  background: rgba(161, 46, 46, 0.96);
+}
+
+.toast-item.is-success {
+  background: rgba(23, 45, 69, 0.96);
+}
+
 .emoji-back-to-top {
   position: fixed;
   right: 28px;
-  bottom: 128px;
+  bottom: 28px;
   z-index: 30;
   border-radius: 999px;
   padding: 10px 16px;
@@ -2350,6 +2383,17 @@ pre {
   border-radius: 16px;
   background: #fff;
   padding: 14px;
+  content-visibility: auto;
+  contain-intrinsic-size: 560px;
+}
+
+.emoji-performance-note {
+  padding: 12px 14px;
+  border: 1px solid #dce8f5;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f7fbff 0%, #fffaf4 100%);
+  color: #5c748f;
+  font-size: 13px;
 }
 
 .emoji-section-head {
@@ -2437,6 +2481,29 @@ pre {
   overflow: hidden;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+}
+
+.emoji-section-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #edf3fa;
+}
+
+.emoji-section-footer p {
+  margin: 0;
+  color: #67819b;
+  font-size: 13px;
+}
+
+.emoji-section-footer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .emoji-topic-shell {
@@ -2633,6 +2700,21 @@ button:disabled {
 
   .emoji-search-input-row {
     grid-template-columns: 1fr;
+  }
+
+  .toast-viewport {
+    top: 14px;
+    width: calc(100vw - 28px);
+  }
+
+  .toast-item {
+    padding: 10px 14px;
+  }
+
+  .emoji-back-to-top {
+    right: 16px;
+    bottom: 16px;
+    padding: 10px 14px;
   }
 
   .emoji-focus-actions {
