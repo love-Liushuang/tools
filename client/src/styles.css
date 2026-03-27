@@ -281,7 +281,7 @@ a {
 .ghost-btn {
   text-decoration: none;
   border: 1px solid #bad1e8;
-  padding: 8px 11px;
+  padding: 7px 11px;
   border-radius: 8px;
   color: #255880;
   white-space: nowrap;
@@ -2201,6 +2201,7 @@ pre {
 .emoji-search-submit {
   min-width: 88px;
   white-space: nowrap;
+  font-size: unset;
 }
 
 .emoji-toolbar-actions {
@@ -2296,6 +2297,22 @@ pre {
   flex-wrap: wrap;
   gap: 10px;
   justify-content: flex-end;
+}
+
+.emoji-back-to-top {
+  position: fixed;
+  right: 28px;
+  bottom: 28px;
+  z-index: 30;
+  border-radius: 999px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #ff9a34 0%, #ff7c3a 100%);
+  box-shadow: 0 14px 28px rgba(255, 122, 58, 0.24);
+  font-weight: 700;
+}
+
+.emoji-back-to-top:hover {
+  transform: translateY(-1px);
 }
 
 .emoji-keyword-list {
@@ -2616,6 +2633,12 @@ button:disabled {
 
   .emoji-search-input-row {
     grid-template-columns: 1fr;
+  }
+
+  .emoji-back-to-top {
+    right: 16px;
+    bottom: 16px;
+    padding: 10px 14px;
   }
 
   .emoji-focus-actions {

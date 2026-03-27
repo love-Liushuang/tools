@@ -18,6 +18,7 @@ function EmojiListPage() {
   const [activeGroup, setActiveGroup] = useState('all');
   const [selectedCode, setSelectedCode] = useState('');
   const [statusText, setStatusText] = useState('');
+  const [showBackToTop, setShowBackToTop] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -65,6 +66,20 @@ function EmojiListPage() {
       window.clearTimeout(timer);
     };
   }, [statusText]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const shouldShow = window.scrollY > 720;
+      setShowBackToTop((prev) => (prev === shouldShow ? prev : shouldShow));
+    };
+
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
 
   const items = useMemo(() => {
     return createEmojiItems(dataset);
@@ -125,6 +140,13 @@ function EmojiListPage() {
   const handleSearchSubmit = (event) => {
     event.preventDefault();
     setSearchText(searchInput.trim());
+  };
+
+  const handleBackToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
   };
 
   useEffect(() => {
@@ -348,6 +370,17 @@ function EmojiListPage() {
               </section>
             ))}
           </div>
+        ) : null}
+
+        {showBackToTop ? (
+          <button
+            type="button"
+            className="emoji-back-to-top"
+            onClick={handleBackToTop}
+            aria-label="回到页面顶部"
+          >
+            回到顶部
+          </button>
         ) : null}
       </div>
     </ToolPageShell>
