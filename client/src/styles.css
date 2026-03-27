@@ -2302,7 +2302,7 @@ pre {
 .emoji-back-to-top {
   position: fixed;
   right: 28px;
-  bottom: 28px;
+  bottom: 128px;
   z-index: 30;
   border-radius: 999px;
   padding: 10px 16px;
@@ -2633,12 +2633,6 @@ button:disabled {
 
   .emoji-search-input-row {
     grid-template-columns: 1fr;
-  }
-
-  .emoji-back-to-top {
-    right: 16px;
-    bottom: 16px;
-    padding: 10px 14px;
   }
 
   .emoji-focus-actions {
