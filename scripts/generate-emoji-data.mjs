@@ -25,6 +25,10 @@ function unique(items) {
   return Array.from(new Set(items.filter(Boolean)));
 }
 
+function normalizeEmojiAnnotationKey(value) {
+  return String(value || '').replace(/[\uFE0E\uFE0F]/g, '');
+}
+
 function toTitleCase(value) {
   return String(value || '')
     .split('-')
@@ -50,7 +54,9 @@ async function fetchJson(url) {
 }
 
 function parseAnnotationPayload(payload) {
-  const source = payload?.annotations?.annotations || {};
+  const source = payload?.annotations?.annotations
+    || payload?.annotationsDerived?.annotations
+    || {};
   const map = new Map();
 
   for (const [emoji, entry] of Object.entries(source)) {
@@ -144,7 +150,9 @@ function parseEmojiTest(content, annotations) {
     }
     seen.add(emoji);
 
-    const annotation = annotations.get(emoji) || { name: '', keywords: [] };
+    const annotation = annotations.get(emoji)
+      || annotations.get(normalizeEmojiAnnotationKey(emoji))
+      || { name: '', keywords: [] };
     const codepoints = codepointsRaw.trim().split(/\s+/).filter(Boolean);
 
     items.push({
