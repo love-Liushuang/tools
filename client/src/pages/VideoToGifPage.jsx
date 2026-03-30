@@ -281,7 +281,7 @@ function VideoToGifPage() {
     setError('');
     setProgress(0);
     setLogLines([]);
-    setStatusText('正在加载本地转换核心，首次加载会比较慢...');
+    setStatusText('正在加载本地转换核心...');
 
     try {
       await ensureProgressBinding();
@@ -337,17 +337,17 @@ function VideoToGifPage() {
 
   return (
     <ToolPageShell
-      title="视频转 GIF / WebP（本地）"
+      title="视频转 GIF / WebP"
       desc="视频文件仅在浏览器本地读取和转换，浏览器内输出 GIF 或 Animated WebP，不上传原视频。"
     >
       <div className="video-gif-shell">
         <div className="video-gif-hero">
           <div>
             <div className="emoji-kicker">Local Video Tool</div>
-            <h2>纯前端视频转动图</h2>
+            <h2>视频转动图</h2>
             <p>
-              页面只会下载一次本地 FFmpeg 核心文件，原始视频不会上传服务器。
-              推荐优先输出 Animated WebP；只有在目标平台必须要 GIF 时再切到 GIF。
+              原始视频不会上传服务器。
+              推荐优先输出 Animated WebP。
             </p>
           </div>
 
@@ -366,7 +366,7 @@ function VideoToGifPage() {
             </div>
             <div className="emoji-stat-card">
               <span>处理模式</span>
-              <strong>浏览器本地</strong>
+              <strong>浏览器</strong>
             </div>
           </div>
         </div>
@@ -543,9 +543,9 @@ function VideoToGifPage() {
             <div className="video-gif-note-list">
               <p>Animated WebP 通常比 GIF 小很多，更适合网页展示；GIF 主要是兼容性更强。</p>
               <p>想控体积，优先降低片段时长、输出宽度和 FPS；一般先试 `WebP + 320px + 8 FPS + 3s`。</p>
-              <p>核心文件路径：`{FFMPEG_ASSET_CONFIG.coreURL}`</p>
+              {/* <p>核心文件路径：`{FFMPEG_ASSET_CONFIG.coreURL}`</p>
               <p>WASM 文件路径：`{FFMPEG_ASSET_CONFIG.wasmURL}`</p>
-              <p>后续如果要切到网盘直链，只需要修改这一组地址。</p>
+              <p>后续如果要切到网盘直链，只需要修改这一组地址。</p> */}
             </div>
 
             {statusText ? (
@@ -562,7 +562,7 @@ function VideoToGifPage() {
 
             {error ? <p className="error">{error}</p> : null}
 
-            {logLines.length ? (
+            {/* {logLines.length ? (
               <div className="video-gif-log-card">
                 <div className="video-gif-panel-head">
                   <div>
@@ -572,7 +572,7 @@ function VideoToGifPage() {
                 </div>
                 <pre>{logLines.join('\n')}</pre>
               </div>
-            ) : null}
+            ) : null} */}
           </section>
         </div>
 
