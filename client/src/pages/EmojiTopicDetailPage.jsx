@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import ToolPageShell from '../components/ToolPageShell';
+import { useToast } from '../components/ToastProvider';
 import { countTopicEmojis, emojiTopics } from '../data/emojiTopics';
 import {
   copyEmojiText,
@@ -18,7 +19,7 @@ function EmojiTopicDetailPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [selectedKey, setSelectedKey] = useState('');
-  const [statusText, setStatusText] = useState('');
+  const toast = useToast();
 
   const topic = useMemo(
     () => emojiTopics.find((item) => item.id === topicId) || null,
@@ -54,20 +55,6 @@ function EmojiTopicDetailPage() {
       cancelled = true;
     };
   }, []);
-
-  useEffect(() => {
-    if (!statusText) {
-      return undefined;
-    }
-
-    const timer = window.setTimeout(() => {
-      setStatusText('');
-    }, 2200);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [statusText]);
 
   const items = useMemo(() => createEmojiItems(dataset), [dataset]);
   const lookup = useMemo(() => createEmojiLookup(items), [items]);
@@ -122,7 +109,7 @@ function EmojiTopicDetailPage() {
     }
   }, [selectedKey, topicItems]);
 
-  const handleCopy = async (item, mode) => {
+  const handleCopy = useCallback(async (item, mode) => {
     if (!item) {
       return;
     }
@@ -140,12 +127,11 @@ function EmojiTopicDetailPage() {
 
     try {
       await copyEmojiText(text);
-      setLoadError('');
-      setStatusText(message);
+      toast.success(message);
     } catch (error) {
-      setLoadError('复制失败，请手动复制。');
+      toast.error('复制失败，请手动复制。');
     }
-  };
+  }, [toast]);
 
   if (!topic) {
     return (
@@ -222,7 +208,6 @@ function EmojiTopicDetailPage() {
 
         {loading ? <p className="tool-message">正在加载专题 Emoji 数据...</p> : null}
         {loadError ? <p className="error">{loadError}</p> : null}
-        {statusText ? <p className="status-text">{statusText}</p> : null}
 
         {selectedEmoji ? (
           <div className="emoji-focus-card">

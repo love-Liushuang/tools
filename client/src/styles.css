@@ -281,7 +281,7 @@ a {
 .ghost-btn {
   text-decoration: none;
   border: 1px solid #bad1e8;
-  padding: 8px 11px;
+  padding: 7px 11px;
   border-radius: 8px;
   color: #255880;
   white-space: nowrap;
@@ -2187,6 +2187,23 @@ pre {
   min-width: 0;
 }
 
+.emoji-search-form {
+  min-width: 0;
+}
+
+.emoji-search-input-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.emoji-search-submit {
+  min-width: 88px;
+  white-space: nowrap;
+  font-size: unset;
+}
+
 .emoji-toolbar-actions {
   display: flex;
   flex-wrap: wrap;
@@ -2282,6 +2299,55 @@ pre {
   justify-content: flex-end;
 }
 
+.toast-viewport {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  z-index: 50;
+  width: min(92vw, 420px);
+  display: grid;
+  gap: 10px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.toast-item {
+  width: 100%;
+  padding: 10px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 14px;
+  background: rgba(23, 45, 69, 0.96);
+  color: #fff;
+  box-shadow: 0 16px 34px rgba(18, 52, 87, 0.24);
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.toast-item.is-error {
+  background: rgba(161, 46, 46, 0.96);
+}
+
+.toast-item.is-success {
+  background: rgba(23, 45, 69, 0.96);
+}
+
+.emoji-back-to-top {
+  position: fixed;
+  right: 28px;
+  bottom: 128px;
+  z-index: 30;
+  border-radius: 999px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #ff9a34 0%, #ff7c3a 100%);
+  box-shadow: 0 14px 28px rgba(255, 122, 58, 0.24);
+  font-weight: 700;
+}
+
+.emoji-back-to-top:hover {
+  transform: translateY(-1px);
+}
+
 .emoji-keyword-list {
   margin-top: 12px;
   display: flex;
@@ -2317,6 +2383,17 @@ pre {
   border-radius: 16px;
   background: #fff;
   padding: 14px;
+  content-visibility: auto;
+  contain-intrinsic-size: 560px;
+}
+
+.emoji-performance-note {
+  padding: 12px 14px;
+  border: 1px solid #dce8f5;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f7fbff 0%, #fffaf4 100%);
+  color: #5c748f;
+  font-size: 13px;
 }
 
 .emoji-section-head {
@@ -2404,6 +2481,42 @@ pre {
   overflow: hidden;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+}
+
+.emoji-section-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #edf3fa;
+}
+
+.emoji-section-footer p {
+  margin: 0;
+  color: #67819b;
+  font-size: 13px;
+}
+
+.emoji-section-footer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.emoji-load-more-btn {
+  border-color: #ffb56d;
+  background: linear-gradient(135deg, #fff2df 0%, #ffe1b8 100%);
+  color: #a65400;
+  font-weight: 700;
+  box-shadow: 0 10px 20px rgba(255, 166, 77, 0.14);
+}
+
+.emoji-load-more-btn:hover {
+  border-color: #ff9a34;
+  background: linear-gradient(135deg, #ffe9cb 0%, #ffd69d 100%);
 }
 
 .emoji-topic-shell {
@@ -2892,6 +3005,19 @@ button:disabled {
   .video-gif-format-row,
   .video-gif-summary-grid {
     grid-template-columns: 1fr;
+  }
+
+  .emoji-search-input-row {
+    grid-template-columns: 1fr;
+  }
+
+  .toast-viewport {
+    top: 14px;
+    width: calc(100vw - 28px);
+  }
+
+  .toast-item {
+    padding: 10px 14px;
   }
 
   .emoji-focus-actions {

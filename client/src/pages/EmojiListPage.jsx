@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { memo, startTransition, useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ToolPageShell from '../components/ToolPageShell';
+import { useToast } from '../components/ToastProvider';
 import {
   copyEmojiText,
   createEmojiItems,
@@ -9,14 +10,156 @@ import {
   normalizeEmojiText
 } from '../lib/emojiUtils';
 
+const PREVIEW_SECTION_ITEMS = 72;
+const FOCUSED_SECTION_ITEMS = 180;
+const SECTION_LOAD_STEP = 180;
+
+const EmojiCard = memo(function EmojiCard({ item, isActive, onSelect }) {
+  return (
+    <button
+      type="button"
+      className={isActive ? 'emoji-card is-active' : 'emoji-card'}
+      title={`${item.displayName} (${item.name})`}
+      onClick={() => onSelect(item)}
+    >
+      <span className="emoji-card-char">{item.emoji}</span>
+      <span className="emoji-card-name">{item.displayName}</span>
+      <span className="emoji-card-sub">{item.subgroupLabel}</span>
+    </button>
+  );
+}, (prevProps, nextProps) => (
+  prevProps.item === nextProps.item
+  && prevProps.isActive === nextProps.isActive
+  && prevProps.onSelect === nextProps.onSelect
+));
+
+const EmojiSection = memo(function EmojiSection({
+  section,
+  activeCode,
+  isFocusedGroup,
+  onFocusGroup,
+  onSelect
+}) {
+  const initialVisibleCount = Math.min(
+    section.items.length,
+    isFocusedGroup ? FOCUSED_SECTION_ITEMS : PREVIEW_SECTION_ITEMS
+  );
+  const [visibleCount, setVisibleCount] = useState(initialVisibleCount);
+
+  useEffect(() => {
+    setVisibleCount(initialVisibleCount);
+  }, [initialVisibleCount, section]);
+
+  const activeIndex = useMemo(() => {
+    if (!activeCode || !section.codeSet.has(activeCode)) {
+      return -1;
+    }
+
+    return section.items.findIndex((item) => item.code === activeCode);
+  }, [activeCode, section]);
+
+  const resolvedVisibleCount = activeIndex >= 0
+    ? Math.max(visibleCount, activeIndex + 1)
+    : visibleCount;
+
+  const visibleItems = useMemo(
+    () => section.items.slice(0, resolvedVisibleCount),
+    [resolvedVisibleCount, section.items]
+  );
+
+  const remainingCount = section.items.length - resolvedVisibleCount;
+  const nextLoadCount = Math.min(SECTION_LOAD_STEP, remainingCount);
+  const shouldShowFooter = remainingCount > 0 || !isFocusedGroup;
+
+  const handleLoadMore = useCallback(() => {
+    setVisibleCount((prev) => Math.min(prev + SECTION_LOAD_STEP, section.items.length));
+  }, [section.items.length]);
+
+  return (
+    <section className="emoji-section">
+      <div className="emoji-section-head">
+        <div>
+          <h3>{section.label}</h3>
+          <p>{section.key}</p>
+        </div>
+        <span>{formatEmojiNumber(section.count)} 个</span>
+      </div>
+
+      <div className="emoji-grid">
+        {visibleItems.map((item) => (
+          <EmojiCard
+            key={item.code}
+            item={item}
+            isActive={activeCode === item.code}
+            onSelect={onSelect}
+          />
+        ))}
+      </div>
+
+      {shouldShowFooter ? (
+        <div className="emoji-section-footer">
+          <p>
+            已显示 {formatEmojiNumber(visibleItems.length)} / {formatEmojiNumber(section.count)} 个
+          </p>
+          <div className="emoji-section-footer-actions">
+            {remainingCount > 0 ? (
+              <button
+                type="button"
+                className="btn-ghost emoji-load-more-btn"
+                onClick={handleLoadMore}
+              >
+                继续加载 {formatEmojiNumber(nextLoadCount)} 个
+              </button>
+            ) : null}
+            {!isFocusedGroup ? (
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => onFocusGroup(section.key)}
+              >
+                只看本组
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
+}, (prevProps, nextProps) => {
+  if (prevProps.section !== nextProps.section) {
+    return false;
+  }
+
+  if (prevProps.onSelect !== nextProps.onSelect) {
+    return false;
+  }
+
+  if (prevProps.onFocusGroup !== nextProps.onFocusGroup) {
+    return false;
+  }
+
+  if (prevProps.isFocusedGroup !== nextProps.isFocusedGroup) {
+    return false;
+  }
+
+  if (prevProps.activeCode === nextProps.activeCode) {
+    return true;
+  }
+
+  const { codeSet } = prevProps.section;
+  return !codeSet.has(prevProps.activeCode) && !codeSet.has(nextProps.activeCode);
+});
+
 function EmojiListPage() {
   const [dataset, setDataset] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const [searchText, setSearchText] = useState('');
   const [activeGroup, setActiveGroup] = useState('all');
   const [selectedCode, setSelectedCode] = useState('');
-  const [statusText, setStatusText] = useState('');
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  const toast = useToast();
 
   useEffect(() => {
     let cancelled = false;
@@ -52,22 +195,26 @@ function EmojiListPage() {
   }, []);
 
   useEffect(() => {
-    if (!statusText) {
-      return undefined;
-    }
+    const handleScroll = () => {
+      const shouldShow = window.scrollY > 720;
+      setShowBackToTop((prev) => (prev === shouldShow ? prev : shouldShow));
+    };
 
-    const timer = window.setTimeout(() => {
-      setStatusText('');
-    }, 2200);
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
 
     return () => {
-      window.clearTimeout(timer);
+      window.removeEventListener('scroll', handleScroll);
     };
-  }, [statusText]);
+  }, []);
 
   const items = useMemo(() => {
     return createEmojiItems(dataset);
   }, [dataset]);
+
+  const itemMap = useMemo(() => {
+    return new Map(items.map((item) => [item.code, item]));
+  }, [items]);
 
   const normalizedSearch = useMemo(() => normalizeEmojiText(searchText), [searchText]);
 
@@ -91,10 +238,14 @@ function EmojiListPage() {
         groupMap.set(item.group, {
           key: item.group,
           label: item.groupLabel,
-          items: []
+          items: [],
+          codeSet: new Set()
         });
       }
-      groupMap.get(item.group).items.push(item);
+
+      const section = groupMap.get(item.group);
+      section.items.push(item);
+      section.codeSet.add(item.code);
     });
 
     const order = dataset?.groups || [];
@@ -104,6 +255,7 @@ function EmojiListPage() {
         if (!section) {
           return null;
         }
+
         return {
           ...section,
           count: section.items.length
@@ -116,23 +268,34 @@ function EmojiListPage() {
     if (!items.length) {
       return null;
     }
-    return items.find((item) => item.code === selectedCode) || filteredItems[0] || items[0];
-  }, [filteredItems, items, selectedCode]);
-
-  const groups = dataset?.groups || [];
-
-  useEffect(() => {
-    if (!filteredItems.length) {
-      return;
-    }
 
     const selectedVisible = filteredItems.some((item) => item.code === selectedCode);
-    if (!selectedVisible) {
-      setSelectedCode(filteredItems[0].code);
+    if (selectedVisible) {
+      return itemMap.get(selectedCode) || filteredItems[0] || items[0];
     }
-  }, [filteredItems, selectedCode]);
 
-  const handleCopy = async (item, mode) => {
+    return filteredItems[0] || items[0];
+  }, [filteredItems, itemMap, items, selectedCode]);
+
+  const groups = dataset?.groups || [];
+  const isFocusedGroup = activeGroup !== 'all';
+
+  const handleSearchSubmit = (event) => {
+    event.preventDefault();
+    const nextSearch = searchInput.trim();
+    startTransition(() => {
+      setSearchText(nextSearch);
+    });
+  };
+
+  const handleBackToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  };
+
+  const handleCopy = useCallback(async (item, mode) => {
     if (!item) {
       return;
     }
@@ -150,12 +313,45 @@ function EmojiListPage() {
 
     try {
       await copyEmojiText(text);
-      setLoadError('');
-      setStatusText(message);
+      toast.success(message);
     } catch (error) {
-      setLoadError('复制失败，请手动复制。');
+      toast.error('复制失败，请手动复制。');
     }
-  };
+  }, [toast]);
+
+  const handleCardSelect = useCallback((item) => {
+    startTransition(() => {
+      setSelectedCode(item.code);
+    });
+    void handleCopy(item, 'emoji');
+  }, [handleCopy]);
+
+  const handleGroupChange = useCallback((groupKey) => {
+    startTransition(() => {
+      setActiveGroup(groupKey);
+    });
+  }, []);
+
+  const handleResetFilters = useCallback(() => {
+    startTransition(() => {
+      setSearchInput('');
+      setSearchText('');
+      setActiveGroup('all');
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!filteredItems.length) {
+      return;
+    }
+
+    const selectedVisible = filteredItems.some((item) => item.code === selectedCode);
+    if (!selectedVisible) {
+      startTransition(() => {
+        setSelectedCode(filteredItems[0].code);
+      });
+    }
+  }, [filteredItems, selectedCode]);
 
   return (
     <ToolPageShell
@@ -194,15 +390,26 @@ function EmojiListPage() {
         </div>
 
         <div className="emoji-toolbar">
-          <label className="field-block emoji-search-field">
-            <span>搜索 Emoji</span>
-            <input
-              type="text"
-              placeholder="搜索表情、中文名称、英文名称、关键词或编码..."
-              value={searchText}
-              onChange={(event) => setSearchText(event.target.value)}
-            />
-          </label>
+          <form className="emoji-search-form" onSubmit={handleSearchSubmit}>
+            <label className="field-block emoji-search-field">
+              <span>搜索 Emoji</span>
+              <div className="emoji-search-input-row">
+                <input
+                  type="text"
+                  placeholder="搜索表情、中文名称、英文名称、关键词或编码..."
+                  value={searchInput}
+                  onChange={(event) => setSearchInput(event.target.value)}
+                />
+                <button
+                  type="submit"
+                  className="primary emoji-search-submit"
+                  disabled={searchInput.trim() === searchText}
+                >
+                  搜索
+                </button>
+              </div>
+            </label>
+          </form>
 
           <div className="emoji-toolbar-actions">
             <Link className="ghost-btn" to="/tools/emoji/topics">
@@ -211,11 +418,8 @@ function EmojiListPage() {
             <button
               type="button"
               className="btn-ghost"
-              onClick={() => {
-                setSearchText('');
-                setActiveGroup('all');
-              }}
-              disabled={!searchText && activeGroup === 'all'}
+              onClick={handleResetFilters}
+              disabled={!searchInput && !searchText && activeGroup === 'all'}
             >
               重置筛选
             </button>
@@ -226,7 +430,7 @@ function EmojiListPage() {
           <button
             type="button"
             className={activeGroup === 'all' ? 'emoji-group-pill active' : 'emoji-group-pill'}
-            onClick={() => setActiveGroup('all')}
+            onClick={() => handleGroupChange('all')}
           >
             全部
             <span>{formatEmojiNumber(dataset?.meta?.total)}</span>
@@ -236,7 +440,7 @@ function EmojiListPage() {
               key={group.key}
               type="button"
               className={activeGroup === group.key ? 'emoji-group-pill active' : 'emoji-group-pill'}
-              onClick={() => setActiveGroup(group.key)}
+              onClick={() => handleGroupChange(group.key)}
             >
               {group.label}
               <span>{formatEmojiNumber(group.count)}</span>
@@ -246,7 +450,6 @@ function EmojiListPage() {
 
         {loading ? <p className="tool-message">正在加载 Emoji 数据...</p> : null}
         {loadError ? <p className="error">{loadError}</p> : null}
-        {statusText ? <p className="status-text">{statusText}</p> : null}
 
         {selectedEmoji ? (
           <div className="emoji-focus-card">
@@ -300,36 +503,27 @@ function EmojiListPage() {
         {!loading && !!filteredItems.length ? (
           <div className="emoji-section-list">
             {sectionList.map((section) => (
-              <section key={section.key} className="emoji-section">
-                <div className="emoji-section-head">
-                  <div>
-                    <h3>{section.label}</h3>
-                    <p>{section.key}</p>
-                  </div>
-                  <span>{formatEmojiNumber(section.count)} 个</span>
-                </div>
-
-                <div className="emoji-grid">
-                  {section.items.map((item) => (
-                    <button
-                      key={item.code}
-                      type="button"
-                      className={selectedEmoji?.code === item.code ? 'emoji-card is-active' : 'emoji-card'}
-                      title={`${item.displayName} (${item.name})`}
-                      onClick={() => {
-                        setSelectedCode(item.code);
-                        handleCopy(item, 'emoji');
-                      }}
-                    >
-                      <span className="emoji-card-char">{item.emoji}</span>
-                      <span className="emoji-card-name">{item.displayName}</span>
-                      <span className="emoji-card-sub">{item.subgroupLabel}</span>
-                    </button>
-                  ))}
-                </div>
-              </section>
+              <EmojiSection
+                key={section.key}
+                section={section}
+                activeCode={selectedEmoji?.code || ''}
+                isFocusedGroup={isFocusedGroup}
+                onFocusGroup={handleGroupChange}
+                onSelect={handleCardSelect}
+              />
             ))}
           </div>
+        ) : null}
+
+        {showBackToTop ? (
+          <button
+            type="button"
+            className="emoji-back-to-top"
+            onClick={handleBackToTop}
+            aria-label="回到页面顶部"
+          >
+            回到顶部
+          </button>
         ) : null}
       </div>
     </ToolPageShell>
