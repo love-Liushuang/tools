@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@ffmpeg/ffmpeg": "^0.12.15",
     "crypto": "^1.0.1",
     "dompurify": "^3.3.3",
     "marked": "^17.0.4",

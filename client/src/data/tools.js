@@ -1,6 +1,7 @@
 export const categories = [
     { key: 'all', label: '全部工具' },
     { key: 'image', label: '图片处理' },
+    { key: 'video', label: '视频处理' },
     { key: 'text', label: '文本处理' },
     { key: 'wps', label: 'WPS' },
     { key: 'encode', label: '编码转换' },
@@ -106,6 +107,13 @@ export const tools = [
         desc: '输入网址，生成高清全页截图，支持 PNG/PDF 下载。',
         category: 'image',
         path: '/tools/webshot'
+    },
+    {
+        id: 'video-to-gif',
+        name: '视频转 GIF / WebP（本地）',
+        desc: '纯前端读取本地视频，浏览器内转 GIF 或 Animated WebP 并直接下载。',
+        category: 'video',
+        path: '/tools/video-to-gif'
     },
     {
         id: 'md5',
