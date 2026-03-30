@@ -81,12 +81,27 @@ function describeSizeRatio(resultSize, sourceSize) {
   return `约为原视频的 ${(ratio * 100).toFixed(0)}%`;
 }
 
+function normalizeSecondsForField(value) {
+  const safeValue = Math.max(0.2, Number(value) || DEFAULT_SETTINGS.clipDuration);
+  return Number(safeValue.toFixed(1));
+}
+
+function getDefaultClipDurationForFormat(format, duration) {
+  const safeDuration = Math.max(0.2, Number(duration) || DEFAULT_SETTINGS.clipDuration);
+  if (format === 'webp') {
+    return normalizeSecondsForField(safeDuration);
+  }
+
+  return normalizeSecondsForField(Math.min(DEFAULT_SETTINGS.clipDuration, safeDuration));
+}
+
 function VideoToGifPage() {
   const inputRef = useRef(null);
   const progressHandlerRef = useRef(null);
   const logHandlerRef = useRef(null);
   const stageRef = useRef('等待开始');
   const jobTokenRef = useRef(0);
+  const clipDurationCustomizedRef = useRef(false);
 
   const [file, setFile] = useState(null);
   const [videoUrl, setVideoUrl] = useState('');
@@ -104,11 +119,17 @@ function VideoToGifPage() {
   const [error, setError] = useState('');
   const [result, setResult] = useState(null);
   const [logLines, setLogLines] = useState([]);
+  const clipDurationLimit = metadata && outputFormat === 'webp'
+    ? Math.max(MAX_CLIP_DURATION, metadata.duration)
+    : MAX_CLIP_DURATION;
 
   const applyPreset = (preset) => {
+    clipDurationCustomizedRef.current = true;
     setFps(preset.fps);
     setWidth(Math.min(preset.width, metadata?.width || preset.width));
-    setClipDuration(Math.min(preset.clipDuration, Math.max(0.2, metadata?.duration || preset.clipDuration)));
+    setClipDuration(
+      normalizeSecondsForField(Math.min(preset.clipDuration, Math.max(0.2, metadata?.duration || preset.clipDuration)))
+    );
   };
 
   useEffect(() => {
@@ -142,6 +163,14 @@ function VideoToGifPage() {
     };
   }, [result]);
 
+  useEffect(() => {
+    if (!metadata || clipDurationCustomizedRef.current) {
+      return;
+    }
+
+    setClipDuration(getDefaultClipDurationForFormat(outputFormat, metadata.duration));
+  }, [metadata, outputFormat]);
+
   const summaryList = useMemo(() => {
     if (!metadata) {
       return [];
@@ -173,6 +202,7 @@ function VideoToGifPage() {
     setFile(nextFile || null);
     setMetadata(null);
     setStartTime(DEFAULT_SETTINGS.startTime);
+    clipDurationCustomizedRef.current = false;
     setClipDuration(DEFAULT_SETTINGS.clipDuration);
     setWidth(DEFAULT_SETTINGS.width);
     setOutputFormat(DEFAULT_OUTPUT_FORMAT);
@@ -202,6 +232,7 @@ function VideoToGifPage() {
     setStatusText('');
     setProgress(0);
     setLogLines([]);
+    clipDurationCustomizedRef.current = false;
     setOutputFormat(DEFAULT_OUTPUT_FORMAT);
     setWebpQuality(DEFAULT_WEBP_QUALITY);
 
@@ -261,7 +292,12 @@ function VideoToGifPage() {
     const safeFps = Math.round(clampNumber(fps, 1, 20, DEFAULT_SETTINGS.fps));
     const safeWidth = Math.round(clampNumber(width, 80, MAX_OUTPUT_WIDTH, DEFAULT_SETTINGS.width));
     const safeStart = clampNumber(startTime, 0, 3600, DEFAULT_SETTINGS.startTime);
-    const safeDuration = clampNumber(clipDuration, 0.2, MAX_CLIP_DURATION, DEFAULT_SETTINGS.clipDuration);
+    const safeDuration = clampNumber(
+      clipDuration,
+      0.2,
+      clipDurationLimit,
+      getDefaultClipDurationForFormat(outputFormat, metadata?.duration)
+    );
     const safeWebpQuality = Math.round(clampNumber(webpQuality, 20, 100, DEFAULT_WEBP_QUALITY));
     const jobToken = jobTokenRef.current + 1;
     jobTokenRef.current = jobToken;
@@ -407,7 +443,7 @@ function VideoToGifPage() {
                       height: current.videoHeight || 0
                     };
                     setMetadata(nextMetadata);
-                    setClipDuration(Math.min(DEFAULT_SETTINGS.clipDuration, Math.max(0.2, nextMetadata.duration || DEFAULT_SETTINGS.clipDuration)));
+                    setClipDuration(getDefaultClipDurationForFormat(outputFormat, nextMetadata.duration));
                     setWidth(Math.min(DEFAULT_SETTINGS.width, nextMetadata.width || DEFAULT_SETTINGS.width));
                   }}
                 />
@@ -467,10 +503,13 @@ function VideoToGifPage() {
                 <input
                   type="number"
                   min="0.2"
-                  max={MAX_CLIP_DURATION}
+                  max={clipDurationLimit}
                   step="0.1"
                   value={clipDuration}
-                  onChange={(event) => setClipDuration(event.target.value)}
+                  onChange={(event) => {
+                    clipDurationCustomizedRef.current = true;
+                    setClipDuration(event.target.value);
+                  }}
                   disabled={busy}
                 />
               </label>
