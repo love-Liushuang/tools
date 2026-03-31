@@ -3,7 +3,7 @@ import ToolPageShell from '../components/ToolPageShell';
 import {
   convertVideoFileToAnimatedImage,
   ensureFFmpegLoaded,
-  FFMPEG_ASSET_CONFIG,
+//   FFMPEG_ASSET_CONFIG,
   terminateFFmpeg
 } from '../lib/videoGif/ffmpegClient';
 
@@ -95,11 +95,56 @@ function getDefaultClipDurationForFormat(format, duration) {
   return normalizeSecondsForField(Math.min(DEFAULT_SETTINGS.clipDuration, safeDuration));
 }
 
+function normalizeIntegerInput(value, min, max, fallback) {
+  if (value === '') {
+    return '';
+  }
+
+  return Math.round(clampNumber(value, min, max, fallback));
+}
+
+function normalizeDecimalInput(value, min, max, fallback, digits = 1) {
+  if (value === '') {
+    return '';
+  }
+
+  return Number(clampNumber(value, min, max, fallback).toFixed(digits));
+}
+
+function getStageProgressRange(stage) {
+  if (stage.includes('下载 FFmpeg Core')) {
+    return [0.02, 0.1];
+  }
+
+  if (stage.includes('下载 FFmpeg WebAssembly')) {
+    return [0.1, 0.32];
+  }
+
+  if (stage.includes('初始化 FFmpeg')) {
+    return [0.32, 0.4];
+  }
+
+  if (stage.includes('调色板')) {
+    return [0.4, 0.62];
+  }
+
+  if (stage.includes('合成 GIF')) {
+    return [0.62, 0.95];
+  }
+
+  if (stage.includes('Animated WebP')) {
+    return [0.4, 0.95];
+  }
+
+  return [0, 1];
+}
+
 function VideoToGifPage() {
   const inputRef = useRef(null);
   const progressHandlerRef = useRef(null);
   const logHandlerRef = useRef(null);
   const stageRef = useRef('等待开始');
+  const stageProgressRangeRef = useRef([0, 1]);
   const jobTokenRef = useRef(0);
   const clipDurationCustomizedRef = useRef(false);
 
@@ -113,6 +158,7 @@ function VideoToGifPage() {
   const [outputFormat, setOutputFormat] = useState(DEFAULT_OUTPUT_FORMAT);
   const [webpQuality, setWebpQuality] = useState(DEFAULT_WEBP_QUALITY);
   const [engineReady, setEngineReady] = useState(false);
+  const [engineLoading, setEngineLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [statusText, setStatusText] = useState('');
   const [progress, setProgress] = useState(0);
@@ -122,6 +168,9 @@ function VideoToGifPage() {
   const clipDurationLimit = metadata && outputFormat === 'webp'
     ? Math.max(MAX_CLIP_DURATION, metadata.duration)
     : MAX_CLIP_DURATION;
+  const clipRuleLabel = outputFormat === 'webp'
+    ? (metadata ? `默认全长 ${prettySeconds(metadata.duration)}` : '默认全长')
+    : `${MAX_CLIP_DURATION}s 上限`;
 
   const applyPreset = (preset) => {
     clipDurationCustomizedRef.current = true;
@@ -145,6 +194,35 @@ function VideoToGifPage() {
       URL.revokeObjectURL(nextUrl);
     };
   }, [file]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    setEngineLoading(true);
+    ensureFFmpegLoaded()
+      .then(() => {
+        if (cancelled) {
+          return;
+        }
+        setEngineReady(true);
+      })
+      .catch(() => {
+        if (cancelled) {
+          return;
+        }
+        setEngineReady(false);
+      })
+      .finally(() => {
+        if (cancelled) {
+          return;
+        }
+        setEngineLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -191,6 +269,18 @@ function VideoToGifPage() {
       }
       return null;
     });
+  };
+
+  const updateStageProgress = (stage, rawProgress = 0) => {
+    const [start, end] = getStageProgressRange(stage);
+    stageRef.current = stage;
+    stageProgressRangeRef.current = [start, end];
+
+    const normalized = clampNumber(rawProgress, 0, 1, 0);
+    const mappedProgress = start + (end - start) * normalized;
+
+    setProgress((current) => Math.max(current, mappedProgress));
+    setStatusText(`${stage} ${formatProgress(mappedProgress)}`);
   };
 
   const handleFileSelect = (nextFile) => {
@@ -242,16 +332,30 @@ function VideoToGifPage() {
       progressHandlerRef.current = null;
       setBusy(false);
       setEngineReady(false);
+      setEngineLoading(false);
     }
   };
 
   const ensureProgressBinding = async () => {
-    const ffmpeg = await ensureFFmpegLoaded();
+    const ffmpeg = await ensureFFmpegLoaded({
+      onAssetStageChange: (message) => {
+        updateStageProgress(message, 0);
+      },
+      onAssetProgress: (nextProgress) => {
+        const [start, end] = stageProgressRangeRef.current;
+        const mappedProgress = start + (end - start) * clampNumber(nextProgress, 0, 1, 0);
+        setProgress((current) => Math.max(current, mappedProgress));
+        setStatusText(`${stageRef.current} ${formatProgress(mappedProgress)}`);
+      }
+    });
 
     if (!progressHandlerRef.current) {
       progressHandlerRef.current = ({ progress: nextProgress }) => {
-        setProgress(nextProgress);
-        setStatusText(`${stageRef.current} ${formatProgress(nextProgress)}`);
+        const [start, end] = stageProgressRangeRef.current;
+        const normalized = clampNumber(nextProgress, 0, 1, 0);
+        const mappedProgress = start + (end - start) * normalized;
+        setProgress((current) => Math.max(current, mappedProgress));
+        setStatusText(`${stageRef.current} ${formatProgress(mappedProgress)}`);
       };
     }
 
@@ -317,7 +421,7 @@ function VideoToGifPage() {
     setError('');
     setProgress(0);
     setLogLines([]);
-    setStatusText('正在加载本地转换核心...');
+    updateStageProgress('正在准备转换任务...', 0);
 
     try {
       await ensureProgressBinding();
@@ -325,8 +429,9 @@ function VideoToGifPage() {
         return;
       }
       setEngineReady(true);
+      setProgress((current) => Math.max(current, 0.4));
 
-      stageRef.current = outputFormat === 'webp' ? '正在编码 Animated WebP' : '正在生成 GIF 调色板';
+      updateStageProgress(outputFormat === 'webp' ? '正在编码 Animated WebP...' : '正在生成 GIF 调色板...', 0);
       const converted = await convertVideoFileToAnimatedImage({
         file,
         startTime: safeStart,
@@ -336,8 +441,7 @@ function VideoToGifPage() {
         outputFormat,
         webpQuality: safeWebpQuality,
         onStageChange: (message) => {
-          stageRef.current = message;
-          setStatusText(message);
+          updateStageProgress(message, 0);
         }
       });
       if (jobToken !== jobTokenRef.current) {
@@ -390,11 +494,11 @@ function VideoToGifPage() {
           <div className="emoji-stats-grid">
             <div className="emoji-stat-card">
               <span>核心来源</span>
-              <strong>{engineReady ? '已加载' : '项目本地'}</strong>
+              <strong>{engineReady ? '已加载' : engineLoading ? '加载中' : '官方 jsDelivr'}</strong>
             </div>
             <div className="emoji-stat-card">
-              <span>最大片段</span>
-              <strong>{MAX_CLIP_DURATION}s</strong>
+              <span>片段规则</span>
+              <strong>{clipRuleLabel}</strong>
             </div>
             <div className="emoji-stat-card">
               <span>最大宽度</span>
@@ -508,7 +612,22 @@ function VideoToGifPage() {
                   value={clipDuration}
                   onChange={(event) => {
                     clipDurationCustomizedRef.current = true;
-                    setClipDuration(event.target.value);
+                    setClipDuration(
+                      normalizeDecimalInput(
+                        event.target.value,
+                        0.2,
+                        clipDurationLimit,
+                        getDefaultClipDurationForFormat(outputFormat, metadata?.duration)
+                      )
+                    );
+                  }}
+                  onBlur={() => {
+                    setClipDuration((current) => normalizeDecimalInput(
+                      current,
+                      0.2,
+                      clipDurationLimit,
+                      getDefaultClipDurationForFormat(outputFormat, metadata?.duration)
+                    ));
                   }}
                   disabled={busy}
                 />
@@ -522,7 +641,15 @@ function VideoToGifPage() {
                   max={MAX_OUTPUT_WIDTH}
                   step="10"
                   value={width}
-                  onChange={(event) => setWidth(event.target.value)}
+                  onChange={(event) => setWidth(
+                    normalizeIntegerInput(event.target.value, 80, MAX_OUTPUT_WIDTH, DEFAULT_SETTINGS.width)
+                  )}
+                  onBlur={() => setWidth((current) => normalizeIntegerInput(
+                    current,
+                    80,
+                    MAX_OUTPUT_WIDTH,
+                    DEFAULT_SETTINGS.width
+                  ))}
                   disabled={busy}
                 />
               </label>

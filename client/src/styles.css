@@ -2707,6 +2707,16 @@ pre {
   line-height: 1.7;
 }
 
+.video-gif-hero .emoji-stat-card {
+  min-height: 90px;
+}
+
+.video-gif-hero .emoji-stat-card strong {
+  font-size: 22px;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
 .video-gif-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.9fr);

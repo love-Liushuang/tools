@@ -1,9 +1,6 @@
-const PUBLIC_BASE = import.meta.env.BASE_URL || '/';
-const NORMALIZED_BASE = PUBLIC_BASE.endsWith('/') ? PUBLIC_BASE : `${PUBLIC_BASE}/`;
-
 export const FFMPEG_ASSET_CONFIG = {
-  coreURL: `${NORMALIZED_BASE}vendor/ffmpeg/ffmpeg-core.js`,
-  wasmURL: `${NORMALIZED_BASE}vendor/ffmpeg/ffmpeg-core.wasm`
+  coreURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.js',
+  wasmURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.wasm'
 };
 
 let ffmpegInstance = null;
@@ -32,29 +29,78 @@ async function getFFmpegModule() {
   return import('@ffmpeg/ffmpeg');
 }
 
-async function toBlobURL(url, mimeType) {
+async function toBlobURL(url, mimeType, onProgress) {
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`FFmpeg 核心文件加载失败：${url}`);
   }
 
-  const buffer = await response.arrayBuffer();
+  const total = Number(response.headers.get('content-length')) || 0;
+
+  if (!response.body) {
+    const buffer = await response.arrayBuffer();
+    onProgress?.(1);
+    return URL.createObjectURL(new Blob([buffer], { type: mimeType }));
+  }
+
+  const reader = response.body.getReader();
+  const chunks = [];
+  let loaded = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+
+    if (value) {
+      chunks.push(value);
+      loaded += value.byteLength;
+      if (total > 0) {
+        onProgress?.(loaded / total);
+      }
+    }
+  }
+
+  if (total <= 0) {
+    onProgress?.(1);
+  }
+
+  const buffer = new Uint8Array(loaded);
+  let offset = 0;
+  chunks.forEach((chunk) => {
+    buffer.set(chunk, offset);
+    offset += chunk.byteLength;
+  });
+
   return URL.createObjectURL(new Blob([buffer], { type: mimeType }));
 }
 
-async function ensureFFmpegBlobAssets() {
+async function ensureFFmpegBlobAssets({ onAssetStageChange, onAssetProgress } = {}) {
   if (ffmpegBlobAssetConfig) {
     return ffmpegBlobAssetConfig;
   }
 
   if (!ffmpegBlobAssetPromise) {
-    ffmpegBlobAssetPromise = Promise.all([
-      toBlobURL(FFMPEG_ASSET_CONFIG.coreURL, 'text/javascript'),
-      toBlobURL(FFMPEG_ASSET_CONFIG.wasmURL, 'application/wasm')
-    ]).then(([coreURL, wasmURL]) => {
+    ffmpegBlobAssetPromise = (async () => {
+      onAssetStageChange?.('正在下载 FFmpeg Core 脚本...');
+      const coreURL = await toBlobURL(
+        FFMPEG_ASSET_CONFIG.coreURL,
+        'text/javascript',
+        (progress) => onAssetProgress?.(progress * 0.15)
+      );
+
+      onAssetStageChange?.('正在下载 FFmpeg WebAssembly...');
+      const wasmURL = await toBlobURL(
+        FFMPEG_ASSET_CONFIG.wasmURL,
+        'application/wasm',
+        (progress) => onAssetProgress?.(0.15 + progress * 0.85)
+      );
+
+      onAssetProgress?.(1);
       ffmpegBlobAssetConfig = { coreURL, wasmURL };
       return ffmpegBlobAssetConfig;
-    }).catch((error) => {
+    })().catch((error) => {
       ffmpegBlobAssetPromise = null;
       ffmpegBlobAssetConfig = null;
       throw error;
@@ -74,7 +120,7 @@ function revokeFFmpegBlobAssets() {
   ffmpegBlobAssetPromise = null;
 }
 
-export async function ensureFFmpegLoaded() {
+export async function ensureFFmpegLoaded(options = {}) {
   if (ffmpegInstance?.loaded) {
     return ffmpegInstance;
   }
@@ -82,9 +128,11 @@ export async function ensureFFmpegLoaded() {
   if (!ffmpegLoadPromise) {
     ffmpegLoadPromise = (async () => {
       const { FFmpeg } = await getFFmpegModule();
-      const blobAssetConfig = await ensureFFmpegBlobAssets();
+      const blobAssetConfig = await ensureFFmpegBlobAssets(options);
+      options.onAssetStageChange?.('正在初始化 FFmpeg 引擎...');
       const ffmpeg = new FFmpeg();
       await ffmpeg.load(blobAssetConfig);
+      options.onAssetProgress?.(1);
       ffmpegInstance = ffmpeg;
       return ffmpeg;
     })().catch((error) => {
