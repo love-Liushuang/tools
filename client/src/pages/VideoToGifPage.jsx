@@ -147,6 +147,11 @@ function VideoToGifPage() {
   const stageProgressRangeRef = useRef([0, 1]);
   const jobTokenRef = useRef(0);
   const clipDurationCustomizedRef = useRef(false);
+  const clipDurationMemoryRef = useRef({
+    gif: DEFAULT_SETTINGS.clipDuration,
+    webp: DEFAULT_SETTINGS.clipDuration
+  });
+  const prevOutputFormatRef = useRef(DEFAULT_OUTPUT_FORMAT);
 
   const [file, setFile] = useState(null);
   const [videoUrl, setVideoUrl] = useState('');
@@ -169,16 +174,18 @@ function VideoToGifPage() {
     ? Math.max(MAX_CLIP_DURATION, metadata.duration)
     : MAX_CLIP_DURATION;
   const clipRuleLabel = outputFormat === 'webp'
-    ? (metadata ? `默认全长 ${prettySeconds(metadata.duration)}` : '默认全长')
+    ? '默认全长'
     : `${MAX_CLIP_DURATION}s 上限`;
 
   const applyPreset = (preset) => {
     clipDurationCustomizedRef.current = true;
+    const nextClipDuration = normalizeSecondsForField(
+      Math.min(preset.clipDuration, Math.max(0.2, metadata?.duration || preset.clipDuration))
+    );
+    clipDurationMemoryRef.current[outputFormat] = nextClipDuration;
     setFps(preset.fps);
     setWidth(Math.min(preset.width, metadata?.width || preset.width));
-    setClipDuration(
-      normalizeSecondsForField(Math.min(preset.clipDuration, Math.max(0.2, metadata?.duration || preset.clipDuration)))
-    );
+    setClipDuration(nextClipDuration);
   };
 
   useEffect(() => {
@@ -242,12 +249,46 @@ function VideoToGifPage() {
   }, [result]);
 
   useEffect(() => {
-    if (!metadata || clipDurationCustomizedRef.current) {
+    if (!metadata) {
       return;
     }
 
-    setClipDuration(getDefaultClipDurationForFormat(outputFormat, metadata.duration));
-  }, [metadata, outputFormat]);
+    const defaultGifDuration = getDefaultClipDurationForFormat('gif', metadata.duration);
+    const defaultWebpDuration = getDefaultClipDurationForFormat('webp', metadata.duration);
+
+    if (!clipDurationCustomizedRef.current) {
+      clipDurationMemoryRef.current = {
+        gif: defaultGifDuration,
+        webp: defaultWebpDuration
+      };
+      setClipDuration(outputFormat === 'webp' ? defaultWebpDuration : defaultGifDuration);
+      prevOutputFormatRef.current = outputFormat;
+      return;
+    }
+
+    if (prevOutputFormatRef.current !== outputFormat) {
+      const nextClipDuration = outputFormat === 'webp'
+        ? normalizeSecondsForField(clipDurationMemoryRef.current.webp || defaultWebpDuration)
+        : normalizeSecondsForField(Math.min(
+            clipDurationMemoryRef.current.gif || defaultGifDuration,
+            MAX_CLIP_DURATION,
+            metadata.duration || MAX_CLIP_DURATION
+          ));
+
+      clipDurationMemoryRef.current[outputFormat] = nextClipDuration;
+      setClipDuration(nextClipDuration);
+      prevOutputFormatRef.current = outputFormat;
+      return;
+    }
+
+    if (outputFormat === 'gif' && Number(clipDuration) > MAX_CLIP_DURATION) {
+      const nextClipDuration = normalizeSecondsForField(
+        Math.min(MAX_CLIP_DURATION, metadata.duration || MAX_CLIP_DURATION)
+      );
+      clipDurationMemoryRef.current.gif = nextClipDuration;
+      setClipDuration(nextClipDuration);
+    }
+  }, [clipDuration, metadata, outputFormat]);
 
   const summaryList = useMemo(() => {
     if (!metadata) {
@@ -293,6 +334,11 @@ function VideoToGifPage() {
     setMetadata(null);
     setStartTime(DEFAULT_SETTINGS.startTime);
     clipDurationCustomizedRef.current = false;
+    clipDurationMemoryRef.current = {
+      gif: DEFAULT_SETTINGS.clipDuration,
+      webp: DEFAULT_SETTINGS.clipDuration
+    };
+    prevOutputFormatRef.current = DEFAULT_OUTPUT_FORMAT;
     setClipDuration(DEFAULT_SETTINGS.clipDuration);
     setWidth(DEFAULT_SETTINGS.width);
     setOutputFormat(DEFAULT_OUTPUT_FORMAT);
@@ -323,6 +369,11 @@ function VideoToGifPage() {
     setProgress(0);
     setLogLines([]);
     clipDurationCustomizedRef.current = false;
+    clipDurationMemoryRef.current = {
+      gif: DEFAULT_SETTINGS.clipDuration,
+      webp: DEFAULT_SETTINGS.clipDuration
+    };
+    prevOutputFormatRef.current = DEFAULT_OUTPUT_FORMAT;
     setOutputFormat(DEFAULT_OUTPUT_FORMAT);
     setWebpQuality(DEFAULT_WEBP_QUALITY);
 
@@ -612,22 +663,26 @@ function VideoToGifPage() {
                   value={clipDuration}
                   onChange={(event) => {
                     clipDurationCustomizedRef.current = true;
-                    setClipDuration(
-                      normalizeDecimalInput(
-                        event.target.value,
-                        0.2,
-                        clipDurationLimit,
-                        getDefaultClipDurationForFormat(outputFormat, metadata?.duration)
-                      )
-                    );
-                  }}
-                  onBlur={() => {
-                    setClipDuration((current) => normalizeDecimalInput(
-                      current,
+                    const nextClipDuration = normalizeDecimalInput(
+                      event.target.value,
                       0.2,
                       clipDurationLimit,
                       getDefaultClipDurationForFormat(outputFormat, metadata?.duration)
-                    ));
+                    );
+                    clipDurationMemoryRef.current[outputFormat] = nextClipDuration;
+                    setClipDuration(nextClipDuration);
+                  }}
+                  onBlur={() => {
+                    setClipDuration((current) => {
+                      const nextClipDuration = normalizeDecimalInput(
+                        current,
+                        0.2,
+                        clipDurationLimit,
+                        getDefaultClipDurationForFormat(outputFormat, metadata?.duration)
+                      );
+                      clipDurationMemoryRef.current[outputFormat] = nextClipDuration;
+                      return nextClipDuration;
+                    });
                   }}
                   disabled={busy}
                 />
