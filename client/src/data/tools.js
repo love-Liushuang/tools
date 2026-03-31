@@ -111,7 +111,7 @@ export const tools = [
     {
         id: 'video-to-gif',
         name: '视频转 GIF / WebP（本地）',
-        desc: '纯前端读取本地视频，浏览器内转 GIF 或 Animated WebP 并直接下载。',
+        desc: '本地视频转 GIF 或 Animated WebP 并直接下载，不上传服务器。',
         category: 'video',
         path: '/tools/video-to-gif'
     },
