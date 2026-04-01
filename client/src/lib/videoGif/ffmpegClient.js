@@ -1,12 +1,33 @@
+import {
+  ensureFFmpegClassWorkerURL,
+  revokeFFmpegClassWorkerURL
+} from './ffmpegClassWorker';
+
 export const FFMPEG_ASSET_CONFIG = {
-  coreURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.js',
-  wasmURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.wasm'
+  coreURLs: [
+    'https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.10/dist/esm/ffmpeg-core.js',
+    'https://unpkg.com/@ffmpeg/core-mt@0.12.10/dist/esm/ffmpeg-core.js'
+  ],
+  wasmURLs: [
+    'https://unpkg.com/@ffmpeg/core-mt@0.12.10/dist/esm/ffmpeg-core.wasm'
+  ],
+  workerURLs: [
+    'https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.10/dist/esm/ffmpeg-core.worker.js',
+    'https://unpkg.com/@ffmpeg/core-mt@0.12.10/dist/esm/ffmpeg-core.worker.js'
+  ]
 };
 
 let ffmpegInstance = null;
 let ffmpegLoadPromise = null;
 let ffmpegBlobAssetConfig = null;
 let ffmpegBlobAssetPromise = null;
+let ffmpegLoadState = {
+  stage: '',
+  progress: 0
+};
+
+const ffmpegStageObservers = new Set();
+const ffmpegProgressObservers = new Set();
 
 function sanitizeBaseName(filename) {
   return String(filename || 'video')
@@ -29,51 +50,148 @@ async function getFFmpegModule() {
   return import('@ffmpeg/ffmpeg');
 }
 
-async function toBlobURL(url, mimeType, onProgress) {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`FFmpeg 核心文件加载失败：${url}`);
-  }
+function resetFFmpegLoadState() {
+  ffmpegLoadState = {
+    stage: '',
+    progress: 0
+  };
+}
 
-  const total = Number(response.headers.get('content-length')) || 0;
+function publishFFmpegStage(stage, progress = 0) {
+  ffmpegLoadState = {
+    stage,
+    progress
+  };
 
-  if (!response.body) {
-    const buffer = await response.arrayBuffer();
-    onProgress?.(1);
-    return URL.createObjectURL(new Blob([buffer], { type: mimeType }));
-  }
-
-  const reader = response.body.getReader();
-  const chunks = [];
-  let loaded = 0;
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) {
-      break;
-    }
-
-    if (value) {
-      chunks.push(value);
-      loaded += value.byteLength;
-      if (total > 0) {
-        onProgress?.(loaded / total);
-      }
-    }
-  }
-
-  if (total <= 0) {
-    onProgress?.(1);
-  }
-
-  const buffer = new Uint8Array(loaded);
-  let offset = 0;
-  chunks.forEach((chunk) => {
-    buffer.set(chunk, offset);
-    offset += chunk.byteLength;
+  ffmpegStageObservers.forEach((observer) => {
+    observer(stage);
   });
 
-  return URL.createObjectURL(new Blob([buffer], { type: mimeType }));
+  ffmpegProgressObservers.forEach((observer) => {
+    observer(progress);
+  });
+}
+
+function publishFFmpegProgress(progress) {
+  ffmpegLoadState = {
+    ...ffmpegLoadState,
+    progress
+  };
+
+  ffmpegProgressObservers.forEach((observer) => {
+    observer(progress);
+  });
+}
+
+function subscribeFFmpegLoad(options = {}) {
+  const stageObserver = typeof options.onAssetStageChange === 'function'
+    ? options.onAssetStageChange
+    : null;
+  const progressObserver = typeof options.onAssetProgress === 'function'
+    ? options.onAssetProgress
+    : null;
+
+  if (stageObserver) {
+    ffmpegStageObservers.add(stageObserver);
+  }
+
+  if (progressObserver) {
+    ffmpegProgressObservers.add(progressObserver);
+  }
+
+  if (ffmpegLoadState.stage) {
+    stageObserver?.(ffmpegLoadState.stage);
+    progressObserver?.(ffmpegLoadState.progress);
+  }
+
+  return () => {
+    if (stageObserver) {
+      ffmpegStageObservers.delete(stageObserver);
+    }
+
+    if (progressObserver) {
+      ffmpegProgressObservers.delete(progressObserver);
+    }
+  };
+}
+
+function assertMultiThreadEnvironment() {
+  if (typeof window !== 'undefined' && !window.crossOriginIsolated) {
+    throw new Error('当前页面未启用跨源隔离，无法启动多线程 FFmpeg。请直接刷新当前工具页后重试。');
+  }
+}
+
+async function toBlobURL(url, mimeType, onProgress) {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`核心文件加载失败：${url}`);
+    }
+
+    const total = Number(response.headers.get('content-length')) || 0;
+
+    if (!response.body) {
+      const buffer = await response.arrayBuffer();
+      onProgress?.(1);
+      return URL.createObjectURL(new Blob([buffer], { type: mimeType }));
+    }
+
+    const reader = response.body.getReader();
+    const chunks = [];
+    let loaded = 0;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+
+      if (value) {
+        chunks.push(value);
+        loaded += value.byteLength;
+        if (total > 0) {
+          onProgress?.(loaded / total);
+        }
+      }
+    }
+
+    if (total <= 0) {
+      onProgress?.(1);
+    }
+
+    const buffer = new Uint8Array(loaded);
+    let offset = 0;
+    chunks.forEach((chunk) => {
+      buffer.set(chunk, offset);
+      offset += chunk.byteLength;
+    });
+
+    return URL.createObjectURL(new Blob([buffer], { type: mimeType }));
+  } catch (error) {
+    throw error;
+  }
+}
+
+async function toBlobURLWithFallback(urls, mimeType, onProgress, {
+  onFallbackAttempt,
+  assetName
+} = {}) {
+  const errors = [];
+
+  for (let index = 0; index < urls.length; index += 1) {
+    const url = urls[index];
+    try {
+      if (index > 0) {
+        onFallbackAttempt?.(url, index);
+      }
+      return await toBlobURL(url, mimeType, onProgress);
+    } catch (error) {
+      errors.push(error?.message || String(error));
+      onProgress?.(0);
+    }
+  }
+
+  throw new Error(`${assetName || '资源'} 加载失败：${errors.join('；')}`);
 }
 
 async function ensureFFmpegBlobAssets({ onAssetStageChange, onAssetProgress } = {}) {
@@ -83,22 +201,48 @@ async function ensureFFmpegBlobAssets({ onAssetStageChange, onAssetProgress } = 
 
   if (!ffmpegBlobAssetPromise) {
     ffmpegBlobAssetPromise = (async () => {
-      onAssetStageChange?.('正在下载 FFmpeg Core 脚本...');
-      const coreURL = await toBlobURL(
-        FFMPEG_ASSET_CONFIG.coreURL,
+      publishFFmpegStage('正在下载 Core 脚本...');
+      const coreURL = await toBlobURLWithFallback(
+        FFMPEG_ASSET_CONFIG.coreURLs,
         'text/javascript',
-        (progress) => onAssetProgress?.(progress * 0.15)
+        (progress) => publishFFmpegProgress(progress),
+        {
+          assetName: 'Core 脚本',
+          onFallbackAttempt: () => {
+            publishFFmpegStage('Core 主源较慢，正在切换备用源...');
+          }
+        }
       );
 
-      onAssetStageChange?.('正在下载 FFmpeg WebAssembly...');
-      const wasmURL = await toBlobURL(
-        FFMPEG_ASSET_CONFIG.wasmURL,
+      publishFFmpegStage('正在下载 Worker...');
+      const workerURL = await toBlobURLWithFallback(
+        FFMPEG_ASSET_CONFIG.workerURLs,
+        'text/javascript',
+        (progress) => publishFFmpegProgress(progress),
+        {
+          assetName: 'Worker',
+          onFallbackAttempt: () => {
+            publishFFmpegStage('Worker 主源较慢，正在切换备用源...');
+          }
+        }
+      );
+
+      publishFFmpegStage('正在下载 WebAssembly...');
+      const wasmURL = await toBlobURLWithFallback(
+        FFMPEG_ASSET_CONFIG.wasmURLs,
         'application/wasm',
-        (progress) => onAssetProgress?.(0.15 + progress * 0.85)
+        (progress) => publishFFmpegProgress(progress),
+        {
+          assetName: 'WebAssembly',
+          onFallbackAttempt: () => {
+            publishFFmpegStage('WebAssembly 主源较慢，正在切换备用源...');
+          }
+        }
       );
+      const classWorkerURL = ensureFFmpegClassWorkerURL();
 
-      onAssetProgress?.(1);
-      ffmpegBlobAssetConfig = { coreURL, wasmURL };
+      publishFFmpegProgress(1);
+      ffmpegBlobAssetConfig = { coreURL, wasmURL, workerURL, classWorkerURL };
       return ffmpegBlobAssetConfig;
     })().catch((error) => {
       ffmpegBlobAssetPromise = null;
@@ -114,8 +258,10 @@ function revokeFFmpegBlobAssets() {
   if (ffmpegBlobAssetConfig) {
     URL.revokeObjectURL(ffmpegBlobAssetConfig.coreURL);
     URL.revokeObjectURL(ffmpegBlobAssetConfig.wasmURL);
+    URL.revokeObjectURL(ffmpegBlobAssetConfig.workerURL);
   }
 
+  revokeFFmpegClassWorkerURL();
   ffmpegBlobAssetConfig = null;
   ffmpegBlobAssetPromise = null;
 }
@@ -125,25 +271,34 @@ export async function ensureFFmpegLoaded(options = {}) {
     return ffmpegInstance;
   }
 
-  if (!ffmpegLoadPromise) {
-    ffmpegLoadPromise = (async () => {
-      const { FFmpeg } = await getFFmpegModule();
-      const blobAssetConfig = await ensureFFmpegBlobAssets(options);
-      options.onAssetStageChange?.('正在初始化 FFmpeg 引擎...');
-      const ffmpeg = new FFmpeg();
-      await ffmpeg.load(blobAssetConfig);
-      options.onAssetProgress?.(1);
-      ffmpegInstance = ffmpeg;
-      return ffmpeg;
-    })().catch((error) => {
-      ffmpegLoadPromise = null;
-      ffmpegInstance = null;
-      revokeFFmpegBlobAssets();
-      throw error;
-    });
-  }
+  const unsubscribe = subscribeFFmpegLoad(options);
 
-  return ffmpegLoadPromise;
+  try {
+    if (!ffmpegLoadPromise) {
+      resetFFmpegLoadState();
+      ffmpegLoadPromise = (async () => {
+        assertMultiThreadEnvironment();
+        const { FFmpeg } = await getFFmpegModule();
+        const blobAssetConfig = await ensureFFmpegBlobAssets();
+        publishFFmpegStage('正在初始化 引擎...');
+        const ffmpeg = new FFmpeg();
+        await ffmpeg.load(blobAssetConfig);
+        publishFFmpegProgress(1);
+        ffmpegInstance = ffmpeg;
+        return ffmpeg;
+      })().catch((error) => {
+        ffmpegLoadPromise = null;
+        ffmpegInstance = null;
+        revokeFFmpegBlobAssets();
+        resetFFmpegLoadState();
+        throw error;
+      });
+    }
+
+    return await ffmpegLoadPromise;
+  } finally {
+    unsubscribe();
+  }
 }
 
 async function safeDelete(ffmpeg, path) {
@@ -165,6 +320,7 @@ export async function terminateFFmpeg() {
   ffmpegInstance = null;
   ffmpegLoadPromise = null;
   revokeFFmpegBlobAssets();
+  resetFFmpegLoadState();
 }
 
 export async function convertVideoFileToAnimatedImage({

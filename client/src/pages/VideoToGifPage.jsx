@@ -3,7 +3,6 @@ import ToolPageShell from '../components/ToolPageShell';
 import {
   convertVideoFileToAnimatedImage,
   ensureFFmpegLoaded,
-//   FFMPEG_ASSET_CONFIG,
   terminateFFmpeg
 } from '../lib/videoGif/ffmpegClient';
 
@@ -19,6 +18,7 @@ const MAX_OUTPUT_WIDTH = 720;
 const MAX_LOG_LINES = 24;
 const DEFAULT_OUTPUT_FORMAT = 'webp';
 const DEFAULT_WEBP_QUALITY = 75;
+const MULTI_THREAD_RELOAD_PARAM = 'ffmpeg_mt';
 const PARAMETER_PRESETS = [
   { key: 'size', label: '体积优先', fps: 8, width: 320, clipDuration: 3 },
   { key: 'balanced', label: '平衡', fps: 10, width: 400, clipDuration: 4 },
@@ -68,6 +68,10 @@ function getErrorMessage(error) {
   return '动图生成失败。';
 }
 
+function isBlockingEngineError(message) {
+  return typeof message === 'string' && message.includes('跨源隔离');
+}
+
 function describeSizeRatio(resultSize, sourceSize) {
   if (!sourceSize || !resultSize) {
     return '无法比较';
@@ -112,28 +116,32 @@ function normalizeDecimalInput(value, min, max, fallback, digits = 1) {
 }
 
 function getStageProgressRange(stage) {
-  if (stage.includes('下载 FFmpeg Core')) {
-    return [0.02, 0.1];
+  if (stage.includes('下载 Core') || stage.includes('Core 主源较慢')) {
+    return [0.02, 0.12];
   }
 
-  if (stage.includes('下载 FFmpeg WebAssembly')) {
-    return [0.1, 0.32];
+  if (stage.includes('下载 Worker') || stage.includes('Worker 主源较慢')) {
+    return [0.12, 0.2];
+  }
+
+  if (stage.includes('下载 WebAssembly') || stage.includes('WebAssembly 主源较慢')) {
+    return [0.2, 0.4];
   }
 
   if (stage.includes('初始化 FFmpeg')) {
-    return [0.32, 0.4];
+    return [0.4, 0.48];
   }
 
   if (stage.includes('调色板')) {
-    return [0.4, 0.62];
+    return [0.48, 0.68];
   }
 
   if (stage.includes('合成 GIF')) {
-    return [0.62, 0.95];
+    return [0.68, 0.95];
   }
 
   if (stage.includes('Animated WebP')) {
-    return [0.4, 0.95];
+    return [0.48, 0.95];
   }
 
   return [0, 1];
@@ -164,8 +172,10 @@ function VideoToGifPage() {
   const [webpQuality, setWebpQuality] = useState(DEFAULT_WEBP_QUALITY);
   const [engineReady, setEngineReady] = useState(false);
   const [engineLoading, setEngineLoading] = useState(true);
+  const [engineError, setEngineError] = useState('');
   const [busy, setBusy] = useState(false);
   const [statusText, setStatusText] = useState('');
+  const [, setStatusProgress] = useState(0);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState('');
   const [result, setResult] = useState(null);
@@ -176,6 +186,13 @@ function VideoToGifPage() {
   const clipRuleLabel = outputFormat === 'webp'
     ? '默认全长'
     : `${MAX_CLIP_DURATION}s 上限`;
+  const engineSourceLabel = engineReady
+    ? '已加载'
+    : engineLoading
+      ? '加载中'
+      : engineError
+        ? '不可用'
+        : '官方 CDN';
 
   const applyPreset = (preset) => {
     clipDurationCustomizedRef.current = true;
@@ -204,20 +221,57 @@ function VideoToGifPage() {
 
   useEffect(() => {
     let cancelled = false;
+    const currentUrl = new URL(window.location.href);
+    const hasReloadFlag = currentUrl.searchParams.get(MULTI_THREAD_RELOAD_PARAM) === '1';
+
+    if (!window.crossOriginIsolated) {
+      if (!hasReloadFlag) {
+        currentUrl.searchParams.set(MULTI_THREAD_RELOAD_PARAM, '1');
+        window.location.replace(currentUrl.toString());
+        return undefined;
+      }
+
+      setError('当前页面未启用跨源隔离，无法加载多线程 FFmpeg。请确认部署环境保留 COOP/COEP 响应头。');
+      setEngineLoading(false);
+      setEngineReady(false);
+      setEngineError('当前页面未启用跨源隔离，无法加载多线程 FFmpeg。请确认部署环境保留 COOP/COEP 响应头。');
+      return undefined;
+    }
+
+    if (hasReloadFlag) {
+      currentUrl.searchParams.delete(MULTI_THREAD_RELOAD_PARAM);
+      const normalizedUrl = `${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`;
+      window.history.replaceState({}, '', normalizedUrl);
+    }
 
     setEngineLoading(true);
+    setEngineError('');
+    setError('');
     ensureFFmpegLoaded()
       .then(() => {
         if (cancelled) {
           return;
         }
         setEngineReady(true);
+        setEngineError('');
+        setError('');
       })
-      .catch(() => {
+      .catch((nextError) => {
         if (cancelled) {
           return;
         }
+        const nextMessage = getErrorMessage(nextError);
+        console.warn('preload failed:', nextMessage);
         setEngineReady(false);
+
+        if (isBlockingEngineError(nextMessage)) {
+          setEngineError(nextMessage);
+          setError(nextMessage);
+          return;
+        }
+
+        setEngineError('');
+        setError('');
       })
       .finally(() => {
         if (cancelled) {
@@ -320,14 +374,16 @@ function VideoToGifPage() {
     const normalized = clampNumber(rawProgress, 0, 1, 0);
     const mappedProgress = start + (end - start) * normalized;
 
+    setStatusProgress(normalized);
     setProgress((current) => Math.max(current, mappedProgress));
-    setStatusText(`${stage} ${formatProgress(mappedProgress)}`);
+    setStatusText(`${stage} ${formatProgress(normalized)}`);
   };
 
   const handleFileSelect = (nextFile) => {
     clearResult();
     setError('');
     setStatusText('');
+    setStatusProgress(0);
     setProgress(0);
     setLogLines([]);
     setFile(nextFile || null);
@@ -366,6 +422,7 @@ function VideoToGifPage() {
     setMetadata(null);
     setError('');
     setStatusText('');
+    setStatusProgress(0);
     setProgress(0);
     setLogLines([]);
     clipDurationCustomizedRef.current = false;
@@ -394,9 +451,11 @@ function VideoToGifPage() {
       },
       onAssetProgress: (nextProgress) => {
         const [start, end] = stageProgressRangeRef.current;
-        const mappedProgress = start + (end - start) * clampNumber(nextProgress, 0, 1, 0);
+        const normalized = clampNumber(nextProgress, 0, 1, 0);
+        const mappedProgress = start + (end - start) * normalized;
+        setStatusProgress(normalized);
         setProgress((current) => Math.max(current, mappedProgress));
-        setStatusText(`${stageRef.current} ${formatProgress(mappedProgress)}`);
+        setStatusText(`${stageRef.current} ${formatProgress(normalized)}`);
       }
     });
 
@@ -405,8 +464,9 @@ function VideoToGifPage() {
         const [start, end] = stageProgressRangeRef.current;
         const normalized = clampNumber(nextProgress, 0, 1, 0);
         const mappedProgress = start + (end - start) * normalized;
+        setStatusProgress(normalized);
         setProgress((current) => Math.max(current, mappedProgress));
-        setStatusText(`${stageRef.current} ${formatProgress(mappedProgress)}`);
+        setStatusText(`${stageRef.current} ${formatProgress(normalized)}`);
       };
     }
 
@@ -470,6 +530,7 @@ function VideoToGifPage() {
     clearResult();
     setBusy(true);
     setError('');
+    setStatusProgress(0);
     setProgress(0);
     setLogLines([]);
     updateStageProgress('正在准备转换任务...', 0);
@@ -512,11 +573,13 @@ function VideoToGifPage() {
         mimeType: converted.mimeType,
         webpQuality: safeWebpQuality
       });
+      setStatusProgress(1);
       setProgress(1);
       setStatusText(`${converted.outputFormat === 'webp' ? 'Animated WebP' : 'GIF'} 生成完成，可以直接预览和下载。`);
     } catch (err) {
       if (jobToken === jobTokenRef.current) {
         setError(getErrorMessage(err));
+        setStatusProgress(0);
         setStatusText('');
       }
     } finally {
@@ -540,12 +603,15 @@ function VideoToGifPage() {
               原始视频不会上传服务器。
               推荐优先输出 Animated WebP。
             </p>
+            <p>
+              核心资源包较大，首次加载可能需要较长时间，请耐心等待。
+            </p>
           </div>
 
           <div className="emoji-stats-grid">
             <div className="emoji-stat-card">
               <span>核心来源</span>
-              <strong>{engineReady ? '已加载' : engineLoading ? '加载中' : '官方 jsDelivr'}</strong>
+              <strong>{engineSourceLabel}</strong>
             </div>
             <div className="emoji-stat-card">
               <span>片段规则</span>
@@ -557,7 +623,7 @@ function VideoToGifPage() {
             </div>
             <div className="emoji-stat-card">
               <span>处理模式</span>
-              <strong>浏览器</strong>
+              <strong>多线程</strong>
             </div>
           </div>
         </div>
@@ -764,9 +830,6 @@ function VideoToGifPage() {
             <div className="video-gif-note-list">
               <p>Animated WebP 通常比 GIF 小很多，更适合网页展示；GIF 主要是兼容性更强。</p>
               <p>想控体积，优先降低片段时长、输出宽度和 FPS；一般先试 `WebP + 320px + 8 FPS + 3s`。</p>
-              {/* <p>核心文件路径：`{FFMPEG_ASSET_CONFIG.coreURL}`</p>
-              <p>WASM 文件路径：`{FFMPEG_ASSET_CONFIG.wasmURL}`</p>
-              <p>后续如果要切到网盘直链，只需要修改这一组地址。</p> */}
             </div>
 
             {statusText ? (
