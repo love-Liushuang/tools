@@ -110,10 +110,17 @@ export const tools = [
     },
     {
         id: 'video-to-gif',
-        name: '视频转 GIF / WebP（本地）',
-        desc: '本地视频转 GIF 或 Animated WebP 并直接下载，不上传服务器。',
+        name: '视频转 GIF / WebP（多线程）',
+        desc: '本地视频转 GIF 或 Animated WebP，多线程版本，速度更快。',
         category: 'video',
         path: '/tools/video-to-gif'
+    },
+    {
+        id: 'video-to-gif-single',
+        name: '视频转 GIF / WebP（单线程）',
+        desc: '本地视频转 GIF 或 Animated WebP，单线程版本，兼容要求更低。',
+        category: 'video',
+        path: '/tools/video-to-gif-single'
     },
     {
         id: 'md5',

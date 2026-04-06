@@ -13,6 +13,7 @@ import SvgPathPage from './pages/SvgPathPage';
 import SvgPreviewPage from './pages/SvgPreviewPage';
 import WebshotPage from './pages/WebshotPage';
 import VideoToGifPage from './pages/VideoToGifPage';
+import VideoToGifSinglePage from './pages/VideoToGifSinglePage';
 import FileEncryptPage from './pages/FileEncryptPage';
 import TorrentMagnetPage from './pages/TorrentMagnetPage';
 import MarkdownEditorPage from './pages/MarkdownEditorPage';
@@ -56,6 +57,7 @@ function App() {
           <Route path="tools/svg-preview" element={<SvgPreviewPage />} />
           <Route path="tools/webshot" element={<WebshotPage />} />
           <Route path="tools/video-to-gif" element={<VideoToGifPage />} />
+          <Route path="tools/video-to-gif-single" element={<VideoToGifSinglePage />} />
           <Route path="tools/torrent-magnet" element={<TorrentMagnetPage />} />
           <Route path="tools/markdown-editor" element={<MarkdownEditorPage />} />
           <Route path="tools/md5" element={<Md5Page />} />

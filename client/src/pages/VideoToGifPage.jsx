@@ -1,10 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import ToolPageShell from '../components/ToolPageShell';
-import {
-  convertVideoFileToAnimatedImage,
-  ensureFFmpegLoaded,
-  terminateFFmpeg
-} from '../lib/videoGif/ffmpegClient';
+import * as multiThreadFFmpegClient from '../lib/videoGif/ffmpegClient';
+import * as singleThreadFFmpegClient from '../lib/videoGif/ffmpegSingleClient';
 
 const DEFAULT_SETTINGS = {
   fps: 8,
@@ -28,6 +25,24 @@ const OUTPUT_OPTIONS = [
   { key: 'webp', label: 'Animated WebP', desc: '更适合网页，通常比 GIF 更小' },
   { key: 'gif', label: 'GIF', desc: '兼容性更广，但通常更大' }
 ];
+const ENGINE_VARIANTS = {
+  multi: {
+    shellTitle: '视频转 GIF / WebP（多线程）',
+    shellDesc: '视频文件仅在浏览器本地读取和转换，浏览器内输出 GIF 或 Animated WebP，多线程模式更快，不上传原视频。',
+    modeLabel: '多线程',
+    heroHint: '当前为浏览器多线程模式，速度更快。',
+    requiresIsolation: true,
+    client: multiThreadFFmpegClient
+  },
+  single: {
+    shellTitle: '视频转 GIF / WebP（单线程）',
+    shellDesc: '视频文件仅在浏览器本地读取和转换，浏览器内输出 GIF 或 Animated WebP，单线程模式兼容要求更低，不上传原视频。',
+    modeLabel: '单线程',
+    heroHint: '当前为浏览器单线程模式，兼容要求更低，转换通常会更慢一些。',
+    requiresIsolation: false,
+    client: singleThreadFFmpegClient
+  }
+};
 
 function prettyBytes(bytes) {
   if (bytes < 1024) {
@@ -147,7 +162,13 @@ function getStageProgressRange(stage) {
   return [0, 1];
 }
 
-function VideoToGifPage() {
+function VideoToGifPage({ engineMode = 'multi' }) {
+  const engineVariant = ENGINE_VARIANTS[engineMode] || ENGINE_VARIANTS.multi;
+  const {
+    convertVideoFileToAnimatedImage,
+    ensureFFmpegLoaded,
+    terminateFFmpeg
+  } = engineVariant.client;
   const inputRef = useRef(null);
   const progressHandlerRef = useRef(null);
   const logHandlerRef = useRef(null);
@@ -224,7 +245,7 @@ function VideoToGifPage() {
     const currentUrl = new URL(window.location.href);
     const hasReloadFlag = currentUrl.searchParams.get(MULTI_THREAD_RELOAD_PARAM) === '1';
 
-    if (!window.crossOriginIsolated) {
+    if (engineVariant.requiresIsolation && !window.crossOriginIsolated) {
       if (!hasReloadFlag) {
         currentUrl.searchParams.set(MULTI_THREAD_RELOAD_PARAM, '1');
         window.location.replace(currentUrl.toString());
@@ -238,7 +259,7 @@ function VideoToGifPage() {
       return undefined;
     }
 
-    if (hasReloadFlag) {
+    if (engineVariant.requiresIsolation && hasReloadFlag) {
       currentUrl.searchParams.delete(MULTI_THREAD_RELOAD_PARAM);
       const normalizedUrl = `${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`;
       window.history.replaceState({}, '', normalizedUrl);
@@ -283,7 +304,7 @@ function VideoToGifPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [engineVariant.requiresIsolation, ensureFFmpegLoaded]);
 
   useEffect(() => {
     return () => {
@@ -292,7 +313,7 @@ function VideoToGifPage() {
       logHandlerRef.current = null;
       void terminateFFmpeg();
     };
-  }, []);
+  }, [terminateFFmpeg]);
 
   useEffect(() => {
     return () => {
@@ -591,8 +612,8 @@ function VideoToGifPage() {
 
   return (
     <ToolPageShell
-      title="视频转 GIF / WebP"
-      desc="视频文件仅在浏览器本地读取和转换，浏览器内输出 GIF 或 Animated WebP，不上传原视频。"
+      title={engineVariant.shellTitle}
+      desc={engineVariant.shellDesc}
     >
       <div className="video-gif-shell">
         <div className="video-gif-hero">
@@ -600,11 +621,14 @@ function VideoToGifPage() {
             <div className="emoji-kicker">Local Video Tool</div>
             <h2>视频转动图</h2>
             <p>
+              首次加载可能需要较长时间，请耐心等待。
+            </p>
+            <p>
               原始视频不会上传服务器。
               推荐优先输出 Animated WebP。
             </p>
             <p>
-              核心资源包较大，首次加载可能需要较长时间，请耐心等待。
+              {engineVariant.heroHint}
             </p>
           </div>
 
@@ -623,7 +647,7 @@ function VideoToGifPage() {
             </div>
             <div className="emoji-stat-card">
               <span>处理模式</span>
-              <strong>多线程</strong>
+              <strong>{engineVariant.modeLabel}</strong>
             </div>
           </div>
         </div>
