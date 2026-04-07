@@ -2973,6 +2973,227 @@ pre {
   border-radius: 12px;
 }
 
+.video-download-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.video-download-panel,
+.video-download-manifest-card,
+.video-download-preview-card,
+.video-download-result-card {
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid #dce8f4;
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.video-download-panel-head,
+.video-download-result-head,
+.video-download-progress-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.video-download-panel-head h3,
+.video-download-result-head h3 {
+  margin: 0;
+  color: #1c456d;
+}
+
+.video-download-panel-head p,
+.video-download-result-head p {
+  margin: 6px 0 0;
+  color: #5a7590;
+  line-height: 1.7;
+  word-break: break-word;
+}
+
+.video-download-pill,
+.video-download-kind {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.video-download-pill {
+  background: #e8f3ff;
+  color: #155caa;
+}
+
+.video-download-pill.is-warm {
+  background: #fff1dc;
+  color: #ab5b00;
+}
+
+.video-download-note-list,
+.video-download-warning-list {
+  margin-top: 16px;
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 14px;
+}
+
+.video-download-note-list {
+  background: #f7fbff;
+  border: 1px solid #dfeaf5;
+}
+
+.video-download-warning-list {
+  background: #fff7ea;
+  border: 1px solid #f3dcc0;
+}
+
+.video-download-note-list p,
+.video-download-warning-list p {
+  margin: 0;
+  color: #56708a;
+  line-height: 1.7;
+  word-break: break-word;
+}
+
+.video-download-warning-list p {
+  color: #885310;
+}
+
+.video-download-step-list {
+  margin: 0;
+  padding-left: 20px;
+  color: #4d6680;
+  line-height: 1.8;
+}
+
+.video-download-step-list li + li {
+  margin-top: 4px;
+}
+
+.video-download-code {
+  min-height: 220px;
+}
+
+.video-download-results-shell {
+  margin-top: 18px;
+  display: grid;
+  gap: 16px;
+}
+
+.video-download-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.video-download-summary-item {
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid #dfeaf5;
+  background: #f8fbff;
+}
+
+.video-download-summary-item span {
+  display: block;
+  color: #69829c;
+  font-size: 12px;
+}
+
+.video-download-summary-item strong {
+  display: block;
+  margin-top: 8px;
+  color: #1c456d;
+  font-size: 15px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.video-download-muted {
+  margin: -4px 0 0;
+  color: #687f97;
+}
+
+.video-download-progress-card,
+.video-download-merge-result {
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid #dfeaf5;
+  background: #f8fbff;
+}
+
+.video-download-progress-head {
+  align-items: center;
+  color: #244c70;
+}
+
+.video-download-progress-bar {
+  margin-top: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #e6f0fa;
+  overflow: hidden;
+}
+
+.video-download-progress-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ff9c3f 0%, #1d7add 100%);
+  transition: width 180ms ease;
+}
+
+.video-download-merge-result p {
+  margin: 0;
+  color: #4d6680;
+}
+
+.video-download-merge-result p + p {
+  margin-top: 8px;
+}
+
+.video-download-preview {
+  width: 100%;
+  max-height: 480px;
+  border-radius: 16px;
+  background: #0e1724;
+}
+
+.video-download-result-list {
+  display: grid;
+  gap: 12px;
+}
+
+.video-download-kind.is-file {
+  background: #e9f8ec;
+  color: #1d7a3c;
+}
+
+.video-download-kind.is-hls {
+  background: #eef3ff;
+  color: #305ac5;
+}
+
+.video-download-kind.is-unknown {
+  background: #f0f4f8;
+  color: #58708a;
+}
+
+.video-download-result-meta,
+.video-download-result-note {
+  margin: 10px 0 0;
+  color: #547089;
+  line-height: 1.7;
+  word-break: break-word;
+}
+
 button.primary {
   background: #1d7add;
   font-weight: 600;
@@ -3001,6 +3222,7 @@ button:disabled {
   .emoji-focus-card,
   .emoji-topic-hero,
   .emoji-topic-title-block,
+  .video-download-layout,
   .video-gif-hero,
   .video-gif-layout,
   .video-gif-result-layout {
@@ -3013,7 +3235,8 @@ button:disabled {
 
   .video-gif-form-grid,
   .video-gif-format-row,
-  .video-gif-summary-grid {
+  .video-gif-summary-grid,
+  .video-download-summary-grid {
     grid-template-columns: 1fr;
   }
 

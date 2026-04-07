@@ -13,6 +13,7 @@ function SiteLayout() {
               首页
             </NavLink>
             <NavLink to="/hot">实时热点</NavLink>
+            <NavLink to="/tools/video-download">视频下载</NavLink>
             <NavLink to="/tools/text-letter">文本加密</NavLink>
             <NavLink to="/tools/unlock-pdf">PDF解密</NavLink>
             <NavLink to="/tools/image-convert">图片转换</NavLink>

@@ -116,6 +116,13 @@ export const tools = [
         path: '/tools/video-to-gif'
     },
     {
+        id: 'video-download',
+        name: '视频链接下载（前端优先）',
+        desc: '浏览器端解析视频直链 / m3u8 / 页面内抓取结果，不走本站视频流量。',
+        category: 'video',
+        path: '/tools/video-download'
+    },
+    {
         id: 'video-to-gif-single',
         name: '视频转 GIF / WebP（单线程）',
         desc: '本地视频转 GIF 或 Animated WebP，单线程版本，兼容要求更低。',
