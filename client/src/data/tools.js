@@ -70,7 +70,7 @@ export const tools = [
         id: 'txt-diff',
         name: '文本内容对比',
         desc: '对比两段文本差异，支持行级高亮显示。',
-        category: 'text',
+        category: ['text', 'dev'],
         path: '/tools/txt-diff'
     },
     {
