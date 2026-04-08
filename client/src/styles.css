@@ -1668,6 +1668,135 @@ pre {
   color: #2b628f;
 }
 
+.urlcodec-shell {
+  display: grid;
+  gap: 14px;
+}
+
+.urlcodec-mode-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.urlcodec-mode-btn {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid #d8e4f0;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #f8fbff 0%, #ffffff 72%);
+  color: #274969;
+  text-align: left;
+  transition: border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+.urlcodec-mode-btn strong {
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.urlcodec-mode-btn span {
+  color: #63809b;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.urlcodec-mode-btn.is-active {
+  border-color: #1d7add;
+  background: linear-gradient(135deg, #fff9f1 0%, #eef7ff 100%);
+  box-shadow: 0 10px 22px rgba(29, 122, 221, 0.08);
+  transform: translateY(-1px);
+}
+
+.urlcodec-toolbar {
+  display: grid;
+  gap: 12px;
+}
+
+.urlcodec-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.urlcodec-chip {
+  font-size: 13px;
+}
+
+.urlcodec-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 12px;
+}
+
+.urlcodec-panel {
+  border: 1px solid #e2ebf5;
+  border-radius: 14px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.urlcodec-panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #eef4fb;
+  background: linear-gradient(135deg, #f4f9ff 0%, #ffffff 72%);
+}
+
+.urlcodec-panel-title {
+  margin: 0;
+  font-size: 15px;
+  color: #274a6d;
+}
+
+.urlcodec-panel-meta {
+  margin: 6px 0 0;
+  color: #6a829b;
+  font-size: 12px;
+}
+
+.urlcodec-panel-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #edf5ff;
+  color: #2d5b86;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.urlcodec-textarea {
+  min-height: 320px;
+  border: 0;
+  border-radius: 0;
+  padding: 14px;
+}
+
+.urlcodec-textarea:focus {
+  outline: none;
+}
+
+.urlcodec-note-list {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid #e2ebf5;
+  border-radius: 14px;
+  background: #f8fbff;
+}
+
+.urlcodec-note-list p {
+  margin: 0;
+  color: #56708a;
+  line-height: 1.7;
+}
+
 .file-summary {
   margin: 12px 0 0;
   color: #4f6882;

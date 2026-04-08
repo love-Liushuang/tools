@@ -18,6 +18,13 @@ export const tools = [
         path: '/tools/json-formatter'
     },
     {
+        id: 'url-codec',
+        name: 'URL 编码/解码',
+        desc: '合并 URL Encode / Decode，支持完整 URL、参数文本和表单 + 空格互转。',
+        category: 'dev',
+        path: '/tools/url-codec'
+    },
+    {
         id: 'base64',
         name: 'Base64 编解码',
         desc: '支持中文文本的 Base64 转换。',
