@@ -2982,7 +2982,20 @@ button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
-
+.div-search-wrap {
+  min-width: 0;
+}
+.div-search-input-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+}
+.div-search-submit {
+    min-width: 88px;
+    white-space: nowrap;
+    font-size: unset;
+}
 @media (max-width: 720px) {
   .md5-hero {
     grid-template-columns: 1fr;

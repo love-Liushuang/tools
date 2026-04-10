@@ -22,6 +22,7 @@ import Md5Page from './pages/Md5Page';
 import EmojiListPage from './pages/EmojiListPage';
 import EmojiTopicsPage from './pages/EmojiTopicsPage';
 import EmojiTopicDetailPage from './pages/EmojiTopicDetailPage';
+import WechatCoverPage from './pages/WechatCoverPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 function App() {
@@ -56,6 +57,7 @@ function App() {
           <Route path="tools/svg-path" element={<SvgPathPage />} />
           <Route path="tools/svg-preview" element={<SvgPreviewPage />} />
           <Route path="tools/webshot" element={<WebshotPage />} />
+          <Route path="tools/getgzhtoutu" element={<WechatCoverPage />} />
           <Route path="tools/video-to-gif" element={<VideoToGifPage />} />
           <Route path="tools/video-to-gif-single" element={<VideoToGifSinglePage />} />
           <Route path="tools/torrent-magnet" element={<TorrentMagnetPage />} />

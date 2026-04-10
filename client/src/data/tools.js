@@ -81,6 +81,13 @@ export const tools = [
         path: '/tools/image-convert'
     },
     {
+        id: 'getgzhtoutu',
+        name: '微信公众号头图获取',
+        desc: '输入公众号文章链接，提取头图封面并预览。',
+        category: 'image',
+        path: '/tools/getgzhtoutu'
+    },
+    {
         id: 'svg-base64',
         name: 'SVG 转 Base64',
         desc: '将 SVG 转为 Base64 / Data URI，并支持预览与复制。',
@@ -146,6 +153,7 @@ export const tools = [
 ];
 
 export const featuredToolIds = [
+    'getgzhtoutu',
     'torrent-magnet',
     'text-letter',
     'unlock-pdf',
