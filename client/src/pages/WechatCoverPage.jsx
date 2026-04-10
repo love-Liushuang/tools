@@ -93,12 +93,18 @@ function WechatCoverPage () {
                     ) : null}
                     <div>
                         <strong>文章链接：</strong>
-                        <a href={result.url} target="_blank" rel="noreferrer">
+                        <a href={result.url} target="_blank" rel="noreferrer" style={{ wordBreak: 'break-all', }}>
                             {result.url}
                         </a>
                     </div>
                     <div className="actions" style={{ marginTop: 16, marginBottom: 16, }}>
-                        <a className="ghost-btn" href={result.cover} target="_blank" rel="noreferrer" style={{ fontSize: 'initial', lineHeight: 'initial', }}>
+                        <a
+                            className="ghost-btn"
+                            href={result.cover}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ fontSize: 'initial', lineHeight: 'initial', }}
+                        >
                             在新标签页打开图片
                         </a>
                         <button type="button" onClick={handleCopy}>
@@ -111,8 +117,28 @@ function WechatCoverPage () {
                         >
                             下载图片
                         </a>
+                        {result.squareCover ? (
+                            <a
+                                className="ghost-btn"
+                                href={`/api/tools/download-img?url=${encodeURIComponent(result.squareCover)}`}
+                                style={{ fontSize: 'initial', lineHeight: 'initial', }}
+                            >
+                                下载方图
+                            </a>
+                        ) : null}
                     </div>
+                    {result.squareCover ? (
+                        <div>
+                            <div><strong>分享方图：</strong></div>
+                            <img
+                                src={`/api/tools/preview-img?url=${encodeURIComponent(result.squareCover)}`}
+                                alt={'方图'}
+                                style={{ width: 200, }}
+                            />
+                        </div>
+                    ) : null}
                     <div>
+                        <div><strong>微信公众号头图：</strong></div>
                         <img
                             src={`/api/tools/preview-img?url=${encodeURIComponent(result.cover)}`}
                             alt={result.title || '封面'}

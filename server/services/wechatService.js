@@ -56,7 +56,12 @@ function parseHTML (html) {
         author: $('#js_name').text().trim()
     };
 }
-
+function parseSquareCover(html) {
+  if (!html) return null;
+  // 匹配 cdn_url_1_1 分享出来的正方形图
+  const match = html.match(/cdn_url_1_1:\s*JsDecode\(['"]([^'"]+)['"]\)/);
+  return match ? match[1] : null;
+}
 // 🚀 Puppeteer池（限流）
 async function runPuppeteer (url) {
     return PUPPETEER_LIMIT(async () => {
@@ -64,16 +69,19 @@ async function runPuppeteer (url) {
             headless: 'new',
             args: ['--no-sandbox']
         });
-
         try {
             const page = await browser.newPage();
             await page.goto(url, { waitUntil: 'networkidle2' });
-
-            return await page.evaluate(() => ({
-                cover: document.querySelector('meta[property="og:image"]')?.content,
-                title: document.querySelector('meta[property="og:title"]')?.content,
-                author: document.querySelector('#js_name')?.innerText
-            }));
+            return await page.evaluate(() => {
+                const html = document.documentElement.innerHTML;
+                const squareMatch = html.match(/cdn_url_1_1:\s*JsDecode\(['"]([^'"]+)['"]\)/);
+                return {
+                    cover: document.querySelector('meta[property="og:image"]')?.content,
+                    title: document.querySelector('meta[property="og:title"]')?.content,
+                    author: document.querySelector('#js_name')?.innerText,
+                    squareCover: squareMatch ? squareMatch[1] : null
+                };
+            });
         } finally {
             await browser.close();
         }
@@ -95,8 +103,11 @@ async function fetchWechatCover (targetUrl) {
 
         try {
             const html = await fetchHTML(url);
+            // 原有解析
             result = parseHTML(html);
-
+            // ⭐ 新增：正方形图
+            const squareCover = parseSquareCover(html);
+            result.squareCover = squareCover;
             if (!result.cover) throw new Error('cheerio失败');
         } catch {
             result = await runPuppeteer(url);
@@ -108,7 +119,8 @@ async function fetchWechatCover (targetUrl) {
             url,
             cover: result.cover,
             title: result.title || '',
-            author: result.author || ''
+            author: result.author || '',
+            squareCover: result.squareCover || ''
         };
 
         cache.set(url, { time: Date.now(), data });
