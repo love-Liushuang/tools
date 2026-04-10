@@ -3,6 +3,7 @@ const DIRECT_VIDEO_EXTENSIONS = [
   '.webm',
   '.mov',
   '.m4v',
+  '.m4s',
   '.mkv',
   '.avi',
   '.flv',
@@ -84,6 +85,14 @@ function classifyUrlKind(url, mimeType = '') {
   return 'unknown';
 }
 
+function normalizeEntryKind(kind, url, mimeType = '', audioUrl = '') {
+  if (kind === 'dash' || audioUrl) {
+    return 'dash';
+  }
+
+  return kind || classifyUrlKind(url, mimeType);
+}
+
 function dedupeEntries(entries) {
   const map = new Map();
 
@@ -96,14 +105,18 @@ function dedupeEntries(entries) {
     const nextEntry = {
       id: entry.id || `${index}-${Math.random().toString(36).slice(2, 7)}`,
       url: entry.url,
-      kind: entry.kind || classifyUrlKind(entry.url, entry.mimeType),
+      kind: normalizeEntryKind(entry.kind, entry.url, entry.mimeType, entry.audioUrl),
       label: entry.label || getDefaultLabel(entry.url),
       note: entry.note || '',
       sourceType: entry.sourceType || 'unknown',
       mimeType: entry.mimeType || '',
       metaText: entry.metaText || '',
       pageTitle: entry.pageTitle || '',
-      fromCapture: Boolean(entry.fromCapture)
+      fromCapture: Boolean(entry.fromCapture),
+      audioUrl: entry.audioUrl || '',
+      ext: entry.ext || '',
+      downloadName: entry.downloadName || '',
+      qualityLabel: entry.qualityLabel || ''
     };
 
     if (!existing) {
@@ -125,6 +138,26 @@ function dedupeEntries(entries) {
 
     if (existing.kind === 'unknown' && nextEntry.kind !== 'unknown') {
       existing.kind = nextEntry.kind;
+    }
+
+    if (existing.kind !== 'dash' && nextEntry.kind === 'dash') {
+      existing.kind = 'dash';
+    }
+
+    if (!existing.audioUrl && nextEntry.audioUrl) {
+      existing.audioUrl = nextEntry.audioUrl;
+    }
+
+    if (!existing.ext && nextEntry.ext) {
+      existing.ext = nextEntry.ext;
+    }
+
+    if (!existing.downloadName && nextEntry.downloadName) {
+      existing.downloadName = nextEntry.downloadName;
+    }
+
+    if (!existing.qualityLabel && nextEntry.qualityLabel) {
+      existing.qualityLabel = nextEntry.qualityLabel;
     }
   });
 
@@ -524,23 +557,37 @@ function buildCapturedAnalysis(payload) {
   const entries = dedupeEntries(
     rawItems.map((item, index) => {
       const nextUrl = normalizeUrl(item?.url, pageUrl);
+      const nextAudioUrl = normalizeUrl(item?.audioUrl, pageUrl);
       if (!nextUrl) {
         return null;
       }
       return {
         id: `capture-${index + 1}`,
         url: nextUrl,
-        kind: item.kind || classifyUrlKind(nextUrl, item?.mimeType),
+        kind: normalizeEntryKind(item?.kind, nextUrl, item?.mimeType, nextAudioUrl),
         label: item.label || getDefaultLabel(nextUrl),
         note: item.note || '来自源页面上下文抓取',
         sourceType: item.source || item.sourceType || 'capture',
         metaText: item.metaText || '',
         mimeType: item.mimeType || '',
         pageTitle: payload.title || '',
-        fromCapture: true
+        fromCapture: true,
+        audioUrl: nextAudioUrl,
+        ext: item.ext || '',
+        downloadName: item.downloadName || '',
+        qualityLabel: item.qualityLabel || ''
       };
     }).filter(Boolean)
   );
+
+  const source = payload.source || 'capture';
+  const warnings = entries.length
+    ? [
+        source === 'browser-extension'
+          ? '这些链接来自浏览器插件在源页面和网络请求里的本地捕获，不经过本站服务器。下载是否成功仍取决于目标站鉴权、跨域和签名策略。'
+          : '这些链接来自源页面自身环境，不经过本站服务器，但下载仍可能受目标站鉴权或跨域限制。'
+      ]
+    : ['未从抓取结果中识别出可处理的视频地址。'];
 
   return {
     kind: 'captured',
@@ -548,11 +595,9 @@ function buildCapturedAnalysis(payload) {
     finalUrl: pageUrl,
     title: payload.title || '',
     entries,
-    warnings: entries.length
-      ? ['这些链接来自源页面自身环境，不经过本站服务器，但下载仍可能受目标站鉴权或跨域限制。']
-      : ['未从抓取结果中识别出可处理的视频地址。'],
+    warnings,
     manifest: null,
-    source: 'capture'
+    source
   };
 }
 

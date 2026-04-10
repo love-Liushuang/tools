@@ -41,6 +41,26 @@ function triggerDownload(blob, filename) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
+async function fetchBinaryFile(url, defaultExtension, outputPrefix) {
+  const response = await fetch(url, {
+    method: 'GET',
+    redirect: 'follow'
+  });
+
+  if (!response.ok) {
+    throw new Error(`资源抓取失败：HTTP ${response.status} (${url})`);
+  }
+
+  const extension = getPathExtension(response.url || url) || defaultExtension;
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  return {
+    bytes,
+    extension,
+    finalUrl: response.url || url,
+    fileName: `${outputPrefix}${extension}`
+  };
+}
+
 export async function mergeHlsToMp4({
   manifest,
   fileBaseName,
@@ -137,6 +157,83 @@ export async function mergeHlsToMp4({
     for (const fileName of segmentFiles) {
       await safeDelete(ffmpeg, fileName);
     }
+  }
+}
+
+export async function mergeDashStreamsToMp4({
+  entry,
+  fileBaseName,
+  onStageChange,
+  onProgress
+}) {
+  if (!entry?.url || !entry.audioUrl) {
+    throw new Error('当前条目缺少 DASH 视频或音频地址。');
+  }
+
+  const ffmpeg = await ensureFFmpegLoaded({
+    onAssetStageChange: (stage) => onStageChange?.(stage),
+    onAssetProgress: (progress) => onProgress?.(Math.max(0, Math.min(0.2, progress * 0.2)))
+  });
+
+  const jobId = `dash-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  const outputName = `${jobId}-output.mp4`;
+  const downloadName = `${sanitizeFileBaseName(fileBaseName)}.mp4`;
+  let videoFileName = '';
+  let audioFileName = '';
+
+  try {
+    onStageChange?.('正在抓取 DASH 视频流...');
+    const videoFile = await fetchBinaryFile(entry.url, '.m4s', `${jobId}-video`);
+    videoFileName = videoFile.fileName;
+    await ffmpeg.writeFile(videoFileName, videoFile.bytes);
+    onProgress?.(0.5);
+
+    onStageChange?.('正在抓取 DASH 音频流...');
+    const audioFile = await fetchBinaryFile(entry.audioUrl, '.m4s', `${jobId}-audio`);
+    audioFileName = audioFile.fileName;
+    await ffmpeg.writeFile(audioFileName, audioFile.bytes);
+    onProgress?.(0.78);
+
+    onStageChange?.('正在浏览器内封装 MP4...');
+    let exitCode = await ffmpeg.exec([
+      '-i', videoFileName,
+      '-i', audioFileName,
+      '-c', 'copy',
+      '-movflags', '+faststart',
+      outputName
+    ]);
+
+    if (exitCode !== 0) {
+      exitCode = await ffmpeg.exec([
+        '-i', videoFileName,
+        '-i', audioFileName,
+        '-c', 'copy',
+        outputName
+      ]);
+    }
+
+    if (exitCode !== 0) {
+      throw new Error('DASH 音视频封装失败，请稍后重试。');
+    }
+
+    onStageChange?.('正在生成下载文件...');
+    onProgress?.(0.96);
+    const outputData = await ffmpeg.readFile(outputName);
+    if (!(outputData instanceof Uint8Array)) {
+      throw new Error('输出文件读取失败。');
+    }
+
+    const blob = new Blob([outputData], { type: 'video/mp4' });
+    onProgress?.(1);
+    return {
+      blob,
+      filename: downloadName,
+      size: blob.size
+    };
+  } finally {
+    await safeDelete(ffmpeg, videoFileName);
+    await safeDelete(ffmpeg, audioFileName);
+    await safeDelete(ffmpeg, outputName);
   }
 }
 

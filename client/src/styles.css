@@ -3181,6 +3181,11 @@ pre {
   color: #305ac5;
 }
 
+.video-download-kind.is-dash {
+  background: #efe8ff;
+  color: #7045c7;
+}
+
 .video-download-kind.is-unknown {
   background: #f0f4f8;
   color: #58708a;

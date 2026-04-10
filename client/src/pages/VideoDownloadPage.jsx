@@ -8,12 +8,15 @@ import {
   parseCapturedPayload
 } from '../lib/videoDownload/analyzer';
 import {
+  mergeDashStreamsToMp4,
   mergeHlsToMp4,
   saveMergedVideo,
   terminateFFmpeg
 } from '../lib/videoDownload/hlsDownloader';
 
 const CAPTURE_SNIPPET = getVideoCaptureSnippet();
+const EXTENSION_IMPORT_STORAGE_KEY = 'boxtoolsVideoDownloadImport';
+const EXTENSION_IMPORT_MESSAGE_SOURCE = 'boxtools-video-download-extension';
 
 function formatSeconds(value) {
   if (!Number.isFinite(value) || value <= 0) {
@@ -50,6 +53,10 @@ function formatBytes(bytes) {
 }
 
 function getAnalysisSourceLabel(source) {
+  if (source === 'browser-extension') {
+    return '浏览器插件';
+  }
+
   if (source === 'capture') {
     return '页面内抓取结果';
   }
@@ -66,6 +73,10 @@ function getAnalysisSourceLabel(source) {
 }
 
 function getEntryKindLabel(kind) {
+  if (kind === 'dash') {
+    return 'DASH 音视频';
+  }
+
   if (kind === 'file') {
     return '直链视频';
   }
@@ -163,6 +174,61 @@ function VideoDownloadPage() {
     });
   };
 
+  const applyImportedAnalysis = (payloadLike, successMessage) => {
+    resetRuntimeState();
+
+    try {
+      const nextText = typeof payloadLike === 'string'
+        ? payloadLike
+        : JSON.stringify(payloadLike, null, 2);
+      const nextAnalysis = parseCapturedPayload(nextText);
+      setCapturedText(nextText);
+      setAnalysis(nextAnalysis);
+      setPreviewUrl(nextAnalysis.entries.find((entry) => entry.kind === 'file')?.url || '');
+      setMessage(
+        nextAnalysis.entries.length
+          ? successMessage || `已导入抓取结果，共 ${nextAnalysis.entries.length} 个候选地址。`
+          : '已导入抓取结果，但没有识别出可处理的视频地址。'
+      );
+      if (nextAnalysis.inputUrl) {
+        setInputUrl(nextAnalysis.inputUrl);
+      }
+    } catch (runtimeError) {
+      setAnalysis(null);
+      setPreviewUrl('');
+      setError(runtimeError.message || '抓取结果导入失败。');
+    }
+  };
+
+  useEffect(() => {
+    const importText = sessionStorage.getItem(EXTENSION_IMPORT_STORAGE_KEY);
+    if (importText) {
+      sessionStorage.removeItem(EXTENSION_IMPORT_STORAGE_KEY);
+      applyImportedAnalysis(importText, '已接收插件结果，共享到当前工具页。');
+    }
+
+    const handleExtensionImport = (event) => {
+      if (event.source !== window) {
+        return;
+      }
+
+      if (event.data?.source !== EXTENSION_IMPORT_MESSAGE_SOURCE || event.data?.name !== 'importCapturedPayload') {
+        return;
+      }
+
+      if (!event.data.payload) {
+        return;
+      }
+
+      applyImportedAnalysis(event.data.payload, '已接收插件结果，共享到当前工具页。');
+    };
+
+    window.addEventListener('message', handleExtensionImport);
+    return () => {
+      window.removeEventListener('message', handleExtensionImport);
+    };
+  }, []);
+
   const handleAnalyze = async (urlOverride) => {
     const nextUrl = String(urlOverride || inputUrl || '').trim();
     if (!nextUrl) {
@@ -203,24 +269,7 @@ function VideoDownloadPage() {
   };
 
   const handleImportCaptured = () => {
-    resetRuntimeState();
-    try {
-      const nextAnalysis = parseCapturedPayload(capturedText);
-      setAnalysis(nextAnalysis);
-      setPreviewUrl(nextAnalysis.entries.find((entry) => entry.kind === 'file')?.url || '');
-      setMessage(
-        nextAnalysis.entries.length
-          ? `已导入抓取结果，共 ${nextAnalysis.entries.length} 个候选地址。`
-          : '已导入抓取结果，但没有识别出可处理的视频地址。'
-      );
-      if (nextAnalysis.inputUrl) {
-        setInputUrl(nextAnalysis.inputUrl);
-      }
-    } catch (runtimeError) {
-      setAnalysis(null);
-      setPreviewUrl('');
-      setError(runtimeError.message || '抓取结果导入失败。');
-    }
+    applyImportedAnalysis(capturedText);
   };
 
   const handleCopy = async (text, successMessage) => {
@@ -247,10 +296,13 @@ function VideoDownloadPage() {
       }
 
       const blob = await response.blob();
-      triggerBlobDownload(blob, getSuggestedFilename(response.url || entry.url, 'video'));
+      triggerBlobDownload(
+        blob,
+        entry.downloadName || getSuggestedFilename(response.url || entry.url, 'video')
+      );
       setMessage('浏览器转存成功，已开始下载。');
     } catch (runtimeError) {
-      triggerDirectNavigation(entry.url, getSuggestedFilename(entry.url, 'video'));
+      triggerDirectNavigation(entry.url, entry.downloadName || getSuggestedFilename(entry.url, 'video'));
       setMessage('目标站不允许跨域读取，已切换为浏览器直连方式。若未自动下载，请在新标签页中保存视频。');
     }
   };
@@ -321,6 +373,61 @@ function VideoDownloadPage() {
         stage: '',
         progress: 0,
         error: runtimeError.message || '浏览器端合并失败。',
+        result: null
+      });
+    }
+  };
+
+  const handleMergeDash = async (entry) => {
+    if (!entry?.url || !entry?.audioUrl) {
+      return;
+    }
+
+    setError('');
+    setMessage('');
+    setMergeState({
+      busy: true,
+      stage: '准备浏览器端封装...',
+      progress: 0,
+      error: '',
+      result: null
+    });
+
+    try {
+      const result = await mergeDashStreamsToMp4({
+        entry,
+        fileBaseName: entry.downloadName
+          || analysis?.title
+          || getSuggestedFilename(entry.url, 'video').replace(/\.[^.]+$/, ''),
+        onStageChange: (stage) => {
+          setMergeState((prev) => ({
+            ...prev,
+            stage
+          }));
+        },
+        onProgress: (progress) => {
+          setMergeState((prev) => ({
+            ...prev,
+            progress
+          }));
+        }
+      });
+
+      setMergeState({
+        busy: false,
+        stage: '浏览器端封装完成',
+        progress: 1,
+        error: '',
+        result
+      });
+      saveMergedVideo(result);
+      setMessage('DASH 音视频已在浏览器内封装完成，并已开始下载 MP4。');
+    } catch (runtimeError) {
+      setMergeState({
+        busy: false,
+        stage: '',
+        progress: 0,
+        error: runtimeError.message || '浏览器端封装失败。',
         result: null
       });
     }
@@ -427,6 +534,30 @@ function VideoDownloadPage() {
             >
               清空抓取 JSON
             </button>
+          </div>
+        </section>
+
+        <section className="video-download-panel">
+          <div className="video-download-panel-head">
+            <div>
+              <h3>插件增强模式</h3>
+              <p>适合 Bilibili、微信公众号、登录态页面和带签名校验的站点。插件在目标页面自身环境与浏览器网络层本地捕获候选地址，再导回本页继续下载或合并。</p>
+            </div>
+            <span className="video-download-pill">Extension Assist</span>
+          </div>
+
+          <ol className="video-download-step-list">
+            <li>在仓库里的本地插件源码目录加载扩展程序。</li>
+            <li>打开目标视频页，必要时先点一下播放，让目标站真正发起媒体请求。</li>
+            <li>插件弹窗里可以直接“打开网站工具页”，自动带入结果；也可以继续复制 JSON 手动导入。</li>
+            <li>导入后即可继续分析、预览、直下或在浏览器里本地封装 MP4。</li>
+          </ol>
+
+          <div className="video-download-note-list">
+            <p>这条链路不走本站服务器，也不依赖第三方解析接口。</p>
+            <p>Bilibili 会优先导出 DASH 音视频地址，本页可继续在浏览器里本地封装为 MP4。</p>
+            <p>微信公众号这类页面通常依赖页面内真实播放请求，插件模式比纯网页分析更稳。</p>
+            <p>插件下载会优先尝试沿用来源页上下文触发，防盗链页面成功率会比普通直下更高。</p>
           </div>
         </section>
       </div>
@@ -580,6 +711,10 @@ function VideoDownloadPage() {
                       <button type="button" onClick={() => handleDirectDownload(entry)}>
                         尝试下载
                       </button>
+                    ) : entry.kind === 'dash' ? (
+                      <button type="button" onClick={() => handleMergeDash(entry)} disabled={mergeState.busy}>
+                        {mergeState.busy ? '封装中...' : '本地封装为 MP4'}
+                      </button>
                     ) : (
                       <button type="button" onClick={() => handleAnalyze(entry.url)}>
                         继续解析
@@ -593,6 +728,16 @@ function VideoDownloadPage() {
                         onClick={() => setPreviewUrl(entry.url)}
                       >
                         设为预览
+                      </button>
+                    ) : null}
+
+                    {entry.kind === 'dash' && entry.audioUrl ? (
+                      <button
+                        type="button"
+                        className="btn-ghost"
+                        onClick={() => handleCopy(entry.audioUrl, '音频链接已复制。')}
+                      >
+                        复制音频链接
                       </button>
                     ) : null}
 

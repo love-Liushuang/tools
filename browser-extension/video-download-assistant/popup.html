@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>视频下载助手</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <div class="app">
+      <header class="header">
+        <div>
+          <div class="eyebrow">Local Capture</div>
+          <h1>视频下载助手</h1>
+          <p>当前标签页本地捕获，不走第三方解析服务。</p>
+        </div>
+        <button id="refreshButton" class="ghost-button" type="button">刷新</button>
+      </header>
+
+      <section class="summary-card">
+        <div class="summary-item">
+          <span>当前页面</span>
+          <strong id="pageTitle">读取中...</strong>
+        </div>
+        <div class="summary-item">
+          <span>候选地址</span>
+          <strong id="entryCount">0</strong>
+        </div>
+      </section>
+
+      <div class="actions">
+        <button id="openToolButton" type="button">打开网站工具页</button>
+        <button id="copyPayloadButton" type="button">复制导出 JSON</button>
+        <button id="clearButton" class="ghost-button" type="button">清空结果</button>
+      </div>
+
+      <p id="message" class="message"></p>
+
+      <div id="emptyState" class="empty-state" hidden>
+        <p>当前还没有捕获到候选地址。</p>
+        <p>如果是公众号、B 站或短视频页面，先播放一次视频，再点“刷新”。</p>
+      </div>
+
+      <div id="entryList" class="entry-list"></div>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+  </html>

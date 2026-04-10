@@ -118,7 +118,7 @@ export const tools = [
     {
         id: 'video-download',
         name: '视频链接下载（前端优先）',
-        desc: '浏览器端解析视频直链 / m3u8 / 页面内抓取结果，不走本站视频流量。',
+        desc: '浏览器端解析直链 / m3u8，并支持插件增强抓取 B 站、公众号等页面内视频。',
         category: 'video',
         path: '/tools/video-download'
     },
