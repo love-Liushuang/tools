@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { copyText } from '../lib/tool';
 import ToolPageShell from '../components/ToolPageShell';
 
 const DEFAULT_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160">
@@ -9,28 +10,6 @@ const DEFAULT_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="160" height=
 
 function sanitizeSvg(text) {
   return String(text || '').replace(/^\uFEFF/, '').trim();
-}
-
-async function copyTextToClipboard(text) {
-  const content = String(text || '');
-  if (!content) {
-    return;
-  }
-
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    await navigator.clipboard.writeText(content);
-    return;
-  }
-
-  const textarea = document.createElement('textarea');
-  textarea.value = content;
-  textarea.style.position = 'fixed';
-  textarea.style.left = '-9999px';
-  document.body.appendChild(textarea);
-  textarea.focus();
-  textarea.select();
-  document.execCommand('copy');
-  textarea.remove();
 }
 
 function downloadText(filename, text, mime = 'image/svg+xml;charset=utf-8') {
@@ -172,11 +151,11 @@ function SvgPreviewPage() {
             <button
               type="button"
               onClick={async () => {
-                try {
-                  await copyTextToClipboard(svgText);
-                  setInfo('已复制 SVG 代码。');
-                } catch (err) {
-                  setError('复制失败，请检查浏览器权限。');
+                const ok = await copyText(svgText);
+                if (ok) {
+                    setInfo('已复制 SVG 代码。');
+                } else {
+                    setError('复制失败，请检查浏览器权限。');
                 }
               }}
               disabled={!sanitizeSvg(svgText)}

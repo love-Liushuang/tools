@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
+import { copyText } from '../lib/tool';
 import ToolPageShell from '../components/ToolPageShell';
 
 const utf8Decoder = new TextDecoder('utf-8');
@@ -229,31 +230,6 @@ function buildMagnet(hash, name, size, trackers) {
     link += `&tr=${encodeURIComponent(tracker)}`;
   });
   return link;
-}
-
-async function copyText(text) {
-  if (navigator.clipboard && window.isSecureContext) {
-    try {
-      await navigator.clipboard.writeText(text);
-      return true;
-    } catch (err) {
-      // fall back below
-    }
-  }
-  try {
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    textarea.setAttribute('readonly', 'true');
-    textarea.style.position = 'fixed';
-    textarea.style.top = '-9999px';
-    document.body.appendChild(textarea);
-    textarea.select();
-    const ok = document.execCommand('copy');
-    textarea.remove();
-    return ok;
-  } catch (err) {
-    return false;
-  }
 }
 
 function TorrentMagnetPage() {

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { copyText } from '../lib/tool';
 import ToolPageShell from '../components/ToolPageShell';
 
 function clampNumber(value, { min, max, fallback }) {
@@ -95,28 +96,6 @@ function extractPathsFromInput(rawText) {
   });
 
   return { paths: ds, source: 'text' };
-}
-
-async function copyTextToClipboard(text) {
-  const content = String(text || '');
-  if (!content) {
-    return;
-  }
-
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    await navigator.clipboard.writeText(content);
-    return;
-  }
-
-  const textarea = document.createElement('textarea');
-  textarea.value = content;
-  textarea.style.position = 'fixed';
-  textarea.style.left = '-9999px';
-  document.body.appendChild(textarea);
-  textarea.focus();
-  textarea.select();
-  document.execCommand('copy');
-  textarea.remove();
 }
 
 function downloadText(filename, text, mime = 'text/plain;charset=utf-8') {
@@ -419,11 +398,11 @@ function SvgPathPage() {
               type="button"
               disabled={!svgMarkup}
               onClick={async () => {
-                try {
-                  await copyTextToClipboard(svgMarkup);
-                  setInfo('已复制 SVG 代码。');
-                } catch (err) {
-                  setError('复制失败，请检查浏览器权限。');
+                const ok = await copyText(svgMarkup);
+                if (ok) {
+                    setInfo('已复制 SVG 代码。');
+                } else {
+                    setError('复制失败，请检查浏览器权限。');
                 }
               }}
             >
@@ -521,11 +500,11 @@ function SvgPathPage() {
                   type="button"
                   disabled={!svgMarkup}
                   onClick={async () => {
-                    try {
-                      await copyTextToClipboard(svgMarkup);
-                      setInfo('已复制 SVG 代码。');
-                    } catch (err) {
-                      setError('复制失败，请检查浏览器权限。');
+                    const ok = await copyText(svgMarkup);
+                    if (ok) {
+                        setInfo('已复制 SVG 代码。');
+                    } else {
+                        setError('复制失败，请检查浏览器权限。');
                     }
                   }}
                 >

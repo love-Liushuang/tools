@@ -1,55 +1,50 @@
 import { useState } from 'react';
+import { useToast } from '../components/ToastProvider';
 import ToolPageShell from '../components/ToolPageShell';
+import { copyText } from '../lib/tool';
+
 
 function WechatCoverPage () {
     const [url, setUrl] = useState('');
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
-    const [notice, setNotice] = useState('');
     const [result, setResult] = useState(null);
+    const toast = useToast();
 
     const handleFetch = async () => {
         if (!url.trim()) {
-            setError('请输入微信公众号文章链接');
+            toast.error('请输入微信公众号文章链接');
             return;
         }
-
         setLoading(true);
-        setError('');
-        setNotice('');
+        toast.error('');
         setResult(null);
-
         try {
             const response = await fetch('/api/tools/getgzhtoutu', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ url })
             });
-
             const data = await response.json();
             if (!response.ok || !data.ok) {
                 throw new Error(data?.error || '获取失败，请稍后再试');
             }
-
             setResult(data);
         } catch (err) {
-            setError(err.message || '获取失败，请稍后再试');
+            toast.error(err.message || '获取失败，请稍后再试');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleCopy = async () => {
-        if (!result || !result.cover) {
+    const handleCopy = async (url) => {
+        if (!url) {
             return;
         }
-        try {
-            await navigator.clipboard.writeText(result.cover);
-            setNotice('图片地址已复制到剪贴板');
-            setError('');
-        } catch (err) {
-            setError('复制失败，请手动复制图片地址');
-            setNotice('');
+        const ok = await copyText(url);
+        if (ok) {
+            toast.success('图片地址已复制到剪贴板');
+        } else {
+            toast.error('复制失败，请手动复制。');
         }
     };
 
@@ -76,8 +71,6 @@ function WechatCoverPage () {
                     </div>
                 </label>
             </div>
-            {error ? <p className="error">{error}</p> : null}
-            {notice ? <p className="notice">{notice}</p> : null}
             {result ? (
                 <div className="result-card" style={{ marginTop: 50, fontSize: 18, lineHeight: 1.8, }}>
                     <h2>=========== 获取结果 ===========</h2>
@@ -97,6 +90,39 @@ function WechatCoverPage () {
                             {result.url}
                         </a>
                     </div>
+                    {result.squareCover &&
+                        <div className="actions" style={{ marginTop: 16, marginBottom: 16, }}>
+                            <a
+                                className="ghost-btn"
+                                href={result.squareCover}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{ fontSize: 'initial', lineHeight: 'initial', }}
+                            >
+                                在新标签页打开图片
+                            </a>
+                            <button type="button" onClick={() =>handleCopy(result.squareCover)}>
+                                复制图片地址
+                            </button>
+                            <a
+                                className="ghost-btn"
+                                href={`/api/tools/download-img?url=${encodeURIComponent(result.squareCover)}`}
+                                style={{ fontSize: 'initial', lineHeight: 'initial', }}
+                            >
+                                下载方图
+                            </a>
+                        </div>
+                    }
+                    {result.squareCover ? (
+                        <div>
+                            <div><strong>微信公众号封面方图：</strong></div>
+                            <img
+                                src={`/api/tools/preview-img?url=${encodeURIComponent(result.squareCover)}`}
+                                alt={'微信公众号封面方图'}
+                                style={{ width: 200, }}
+                            />
+                        </div>
+                    ) : null}
                     <div className="actions" style={{ marginTop: 16, marginBottom: 16, }}>
                         <a
                             className="ghost-btn"
@@ -107,7 +133,7 @@ function WechatCoverPage () {
                         >
                             在新标签页打开图片
                         </a>
-                        <button type="button" onClick={handleCopy}>
+                        <button type="button" onClick={() => handleCopy(result.cover)}>
                             复制图片地址
                         </button>
                         <a
@@ -117,31 +143,12 @@ function WechatCoverPage () {
                         >
                             下载图片
                         </a>
-                        {result.squareCover ? (
-                            <a
-                                className="ghost-btn"
-                                href={`/api/tools/download-img?url=${encodeURIComponent(result.squareCover)}`}
-                                style={{ fontSize: 'initial', lineHeight: 'initial', }}
-                            >
-                                下载方图
-                            </a>
-                        ) : null}
                     </div>
-                    {result.squareCover ? (
-                        <div>
-                            <div><strong>分享方图：</strong></div>
-                            <img
-                                src={`/api/tools/preview-img?url=${encodeURIComponent(result.squareCover)}`}
-                                alt={'方图'}
-                                style={{ width: 200, }}
-                            />
-                        </div>
-                    ) : null}
                     <div>
-                        <div><strong>微信公众号头图：</strong></div>
+                        <div><strong>微信公众号封面长图：</strong></div>
                         <img
                             src={`/api/tools/preview-img?url=${encodeURIComponent(result.cover)}`}
-                            alt={result.title || '封面'}
+                            alt={result.title || '微信公众号封面长图'}
                             style={{ maxWidth: '100%', }}
                             onError={(e) => {
                                 e.target.src = result.cover; // fallback

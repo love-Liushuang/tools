@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import ToolPageShell from '../components/ToolPageShell';
+import { copyText } from '../lib/tool';
+
 
 function stripCommentsAndTrailingCommas(text) {
   const input = String(text || '');
@@ -527,28 +529,6 @@ function createGoGenerator() {
   return { generate };
 }
 
-async function copyTextToClipboard(text) {
-  const content = String(text || '');
-  if (!content) {
-    return;
-  }
-
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    await navigator.clipboard.writeText(content);
-    return;
-  }
-
-  const textarea = document.createElement('textarea');
-  textarea.value = content;
-  textarea.style.position = 'fixed';
-  textarea.style.left = '-9999px';
-  document.body.appendChild(textarea);
-  textarea.focus();
-  textarea.select();
-  document.execCommand('copy');
-  textarea.remove();
-}
-
 function downloadText(filename, text, mime = 'application/json;charset=utf-8') {
   const blob = new Blob([String(text || '')], { type: mime });
   const url = URL.createObjectURL(blob);
@@ -884,11 +864,11 @@ function JsonFormatterPage() {
   };
 
   const handleCopyOutput = async () => {
-    try {
-      await copyTextToClipboard(output);
-      setInfo('已复制输出内容。');
-    } catch (err) {
-      setError('复制失败，请检查浏览器权限。');
+    const ok = await copyText(output);
+    if (ok) {
+        setInfo('已复制输出内容。');
+    } else {
+        setError('复制失败，请检查浏览器权限。');
     }
   };
 
@@ -963,11 +943,11 @@ function JsonFormatterPage() {
   };
 
   const copyPanel = async (text) => {
-    try {
-      await copyTextToClipboard(text);
-      setInfo('已复制。');
-    } catch (err) {
-      setError('复制失败，请检查浏览器权限。');
+    const ok = await copyText(output);
+    if (ok) {
+        setInfo('已复制。');
+    } else {
+        setError('复制失败，请检查浏览器权限。');
     }
   };
 

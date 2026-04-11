@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import SparkMD5 from 'spark-md5';
+import { copyText } from '../lib/tool';
 import ToolPageShell from '../components/ToolPageShell';
 
 const CHUNK_SIZE = 4 * 1024 * 1024;
@@ -45,23 +46,6 @@ function createAbortError() {
   const error = new Error('计算已停止');
   error.code = 'HASH_ABORTED';
   return error;
-}
-
-async function copyText(text) {
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    await navigator.clipboard.writeText(text);
-    return;
-  }
-
-  const textarea = document.createElement('textarea');
-  textarea.value = text;
-  textarea.setAttribute('readonly', 'readonly');
-  textarea.style.position = 'fixed';
-  textarea.style.opacity = '0';
-  document.body.appendChild(textarea);
-  textarea.select();
-  document.execCommand('copy');
-  document.body.removeChild(textarea);
 }
 
 function createQueueItems(fileList) {
@@ -283,12 +267,12 @@ function Md5Page() {
     if (!item.md5) {
       return;
     }
-    try {
-      await copyText(item.md5);
-      setError('');
-      setStatusText(`已复制 ${item.file.name} 的 MD5。`);
-    } catch (e) {
-      setError('复制失败，请手动复制结果。');
+    const ok = await copyText(item.md5);
+    if (ok) {
+        setError('');
+        setStatusText(`已复制 ${item.file.name} 的 MD5。`);
+    } else {
+        setError('复制失败，请手动复制结果。');
     }
   };
 
@@ -298,16 +282,15 @@ function Md5Page() {
       setError('暂无可复制的 MD5 结果。');
       return;
     }
-
-    try {
-      const text = readyItems
+    const text = readyItems
         .map((item) => `${item.md5}  ${item.file.name}`)
         .join('\n');
-      await copyText(text);
-      setError('');
-      setStatusText(`已复制 ${readyItems.length} 条 MD5 结果。`);
-    } catch (e) {
-      setError('复制全部结果失败，请稍后重试。');
+    const ok = await copyText(text);
+    if (ok) {
+        setError('');
+        setStatusText(`已复制 ${readyItems.length} 条 MD5 结果。`);
+    } else {
+        setError('复制全部结果失败，请稍后重试。');
     }
   };
 
