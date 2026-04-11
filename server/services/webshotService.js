@@ -25,7 +25,8 @@ const MAX_SCALE = 3;
 const MAX_WIDTH = 2560;
 const MAX_HEIGHT = 1440;
 const MAX_OUTPUT_HEIGHT = Number(process.env.WEBSHOT_MAX_HEIGHT || 60000);
-const SCROLL_DELAY_MS = Number(process.env.WEBSHOT_SCROLL_DELAY_MS || 350);
+const SCROLL_DELAY_MS = Number(process.env.WEBSHOT_SCROLL_DELAY_MS || 150);
+const WARMUP_ROUNDS = Number(process.env.WEBSHOT_WARMUP_ROUNDS || 1);
 const SCROLL_STEP_RATIO = 0.9;
 
 const UA_STRING =
@@ -193,7 +194,14 @@ async function getBrowser() {
       const executablePath = await resolveBrowserExecutablePath();
       return puppeteer.launch({
         executablePath,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--font-render-hinting=none',
+          '--disable-font-subpixel-positioning',
+          '--disable-accelerated-2d-canvas',
+          '--no-first-run'
+        ]
       });
     })().catch((err) => {
       browserPromise = null;
@@ -204,8 +212,12 @@ async function getBrowser() {
 }
 
 async function preparePage(page) {
+  // 强制设置中文字体，解决乱码问题
+  const fontFamily = '"Noto Sans CJK SC", "Noto Sans CJK TC", "Noto Sans CJK JP", "Noto Sans CJK KR", "PingFang SC", "Microsoft YaHei", "Heiti SC", sans-serif';
+
   await page.addStyleTag({
     content: [
+      `* { font-family: ${fontFamily} !important; }`,
       '* { scroll-behavior: auto !important; animation: none !important; transition: none !important; }',
       '* { scroll-snap-type: none !important; scroll-snap-align: none !important; }',
       'html, body { overflow: auto !important; }'
@@ -421,7 +433,7 @@ async function ensureScrollableTarget(page, target, viewportHeight) {
 
 async function warmupScroll(page, viewportHeight, target) {
   let lastHeight = 0;
-  for (let round = 0; round < 3; round += 1) {
+  for (let round = 0; round < WARMUP_ROUNDS; round += 1) {
     const metrics = await getScrollMetrics(page, target, viewportHeight);
     const scrollHeight = metrics.scrollHeight;
     const clientHeight = metrics.clientHeight || viewportHeight;
