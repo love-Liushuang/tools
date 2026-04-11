@@ -90,32 +90,30 @@ function WechatCoverPage () {
                             {result.url}
                         </a>
                     </div>
-                    {result.squareCover &&
-                        <div className="actions" style={{ marginTop: 16, marginBottom: 16, }}>
-                            <a
-                                className="ghost-btn"
-                                href={result.squareCover}
-                                target="_blank"
-                                rel="noreferrer"
-                                style={{ fontSize: 'initial', lineHeight: 'initial', }}
-                            >
-                                在新标签页打开图片
-                            </a>
-                            <button type="button" onClick={() =>handleCopy(result.squareCover)}>
-                                复制图片地址
-                            </button>
-                            <a
-                                className="ghost-btn"
-                                href={`/api/tools/download-img?url=${encodeURIComponent(result.squareCover)}`}
-                                style={{ fontSize: 'initial', lineHeight: 'initial', }}
-                            >
-                                下载方图
-                            </a>
-                        </div>
-                    }
                     {result.squareCover ? (
-                        <div>
+                        <div style={{ marginTop: 16, marginBottom: 16, }}>
                             <div><strong>微信公众号封面方图：</strong></div>
+                            <div className="actions" style={{ marginTop: 6, marginBottom: 6, }}>
+                                <a
+                                    className="ghost-btn"
+                                    href={result.squareCover}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    style={{ fontSize: 'initial', lineHeight: 'initial', }}
+                                >
+                                    在新标签页打开图片
+                                </a>
+                                <button type="button" onClick={() => handleCopy(result.squareCover)}>
+                                    复制图片地址
+                                </button>
+                                <a
+                                    className="ghost-btn"
+                                    href={`/api/tools/download-img?url=${encodeURIComponent(result.squareCover)}`}
+                                    style={{ fontSize: 'initial', lineHeight: 'initial', }}
+                                >
+                                    下载方图
+                                </a>
+                            </div>
                             <img
                                 src={`/api/tools/preview-img?url=${encodeURIComponent(result.squareCover)}`}
                                 alt={'微信公众号封面方图'}
@@ -123,29 +121,29 @@ function WechatCoverPage () {
                             />
                         </div>
                     ) : null}
-                    <div className="actions" style={{ marginTop: 16, marginBottom: 16, }}>
-                        <a
-                            className="ghost-btn"
-                            href={result.cover}
-                            target="_blank"
-                            rel="noreferrer"
-                            style={{ fontSize: 'initial', lineHeight: 'initial', }}
-                        >
-                            在新标签页打开图片
-                        </a>
-                        <button type="button" onClick={() => handleCopy(result.cover)}>
-                            复制图片地址
-                        </button>
-                        <a
-                            className="ghost-btn"
-                            href={`/api/tools/download-img?url=${encodeURIComponent(result.cover)}`}
-                            style={{ fontSize: 'initial', lineHeight: 'initial', }}
-                        >
-                            下载图片
-                        </a>
-                    </div>
-                    <div>
+                    <div style={{ marginTop: 16, marginBottom: 16, }}>
                         <div><strong>微信公众号封面长图：</strong></div>
+                        <div className="actions" style={{ marginTop: 6, marginBottom: 6, }}>
+                            <a
+                                className="ghost-btn"
+                                href={result.cover}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{ fontSize: 'initial', lineHeight: 'initial', }}
+                            >
+                                在新标签页打开图片
+                            </a>
+                            <button type="button" onClick={() => handleCopy(result.cover)}>
+                                复制图片地址
+                            </button>
+                            <a
+                                className="ghost-btn"
+                                href={`/api/tools/download-img?url=${encodeURIComponent(result.cover)}`}
+                                style={{ fontSize: 'initial', lineHeight: 'initial', }}
+                            >
+                                下载图片
+                            </a>
+                        </div>
                         <img
                             src={`/api/tools/preview-img?url=${encodeURIComponent(result.cover)}`}
                             alt={result.title || '微信公众号封面长图'}
