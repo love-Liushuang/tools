@@ -4,6 +4,7 @@ export const categories = [
     { key: 'video', label: '视频处理' },
     { key: 'text', label: '文本处理' },
     { key: 'wps', label: 'WPS' },
+    { key: 'invoice', label: '发票工具' },
     { key: 'encode', label: '编码转换' },
     { key: 'emoji', label: 'Emoji 表情' },
     { key: 'dev', label: '开发工具' },
@@ -72,6 +73,13 @@ export const tools = [
         desc: '上传 PDF，去限制并下载。',
         category: 'wps',
         path: '/tools/unlock-pdf'
+    },
+    {
+        id: 'invoice-pdf-rename',
+        name: 'PDF 电子发票批量重命名',
+        desc: '纯前端本地批量重命名 PDF 电子发票，按日期/金额/号码/销售方自动命名并打包下载。',
+        category: 'invoice',
+        path: '/tools/invoice-pdf-rename'
     },
     {
         id: 'image-convert',
@@ -153,6 +161,7 @@ export const tools = [
 ];
 
 export const featuredToolIds = [
+    'invoice-pdf-rename',
     'getgzhtoutu',
     'torrent-magnet',
     'text-letter',

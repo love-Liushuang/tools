@@ -1,3 +1,4 @@
+import { Suspense, lazy } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import SiteLayout from './components/SiteLayout';
 import HomePage from './pages/HomePage';
@@ -25,6 +26,22 @@ import EmojiTopicDetailPage from './pages/EmojiTopicDetailPage';
 import WechatCoverPage from './pages/WechatCoverPage';
 import NotFoundPage from './pages/NotFoundPage';
 
+const InvoiceRenamePage = lazy(() => import('./pages/InvoiceRenamePage'));
+
+function LazyPage({ children }) {
+  return (
+    <Suspense
+      fallback={(
+        <main className="tool-page">
+          <section className="tool-card">页面加载中...</section>
+        </main>
+      )}
+    >
+      {children}
+    </Suspense>
+  );
+}
+
 function App() {
   return (
     <BrowserRouter>
@@ -38,6 +55,8 @@ function App() {
           <Route path="unlock-pdf" element={<Navigate to="/tools/unlock-pdf" replace />} />
           <Route path="pdf-unlock" element={<Navigate to="/tools/unlock-pdf" replace />} />
           <Route path="PDF解密" element={<Navigate to="/tools/unlock-pdf" replace />} />
+          <Route path="invoice-pdf-rename" element={<Navigate to="/tools/invoice-pdf-rename" replace />} />
+          <Route path="电子发票批量重命名" element={<Navigate to="/tools/invoice-pdf-rename" replace />} />
           <Route path="svg-base64" element={<Navigate to="/tools/svg-base64" replace />} />
           <Route path="SVG转Base64" element={<Navigate to="/tools/svg-base64" replace />} />
           <Route path="svg-path" element={<Navigate to="/tools/svg-path" replace />} />
@@ -52,6 +71,14 @@ function App() {
           <Route path="tools/text-letter" element={<TextLetterPage />} />
           <Route path="tools/txt-diff" element={<TextDiffPage />} />
           <Route path="tools/unlock-pdf" element={<UnlockPdfPage />} />
+          <Route
+            path="tools/invoice-pdf-rename"
+            element={(
+              <LazyPage>
+                <InvoiceRenamePage />
+              </LazyPage>
+            )}
+          />
           <Route path="tools/image-convert" element={<ImageConvertPage />} />
           <Route path="tools/svg-base64" element={<SvgBase64Page />} />
           <Route path="tools/svg-path" element={<SvgPathPage />} />
