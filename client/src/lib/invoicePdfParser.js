@@ -431,7 +431,7 @@ export async function extractInvoiceFromPdf(file) {
     return result;
   } catch (error) {
     if (error?.name === 'PasswordException') {
-      throw new Error('PDF 已加密，当前纯前端版本暂不支持解析加密发票。');
+      throw new Error('PDF 已加密，当前版本暂不支持解析加密发票。');
     }
     throw error;
   } finally {

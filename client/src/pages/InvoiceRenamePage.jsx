@@ -7,11 +7,14 @@ import {
   buildRulePreview,
   ensureUniqueFileName,
   formatExtractedFieldList,
-  INVOICE_RULE_FIELDS
+  INVOICE_RULE_FIELDS,
+  DEFAULT_INVOICE_TYPE,
+  getStoredRuleProfile
 } from '../lib/invoicePdf';
+import InvoiceRuleSettingsModal from '../components/InvoiceRuleSettingsModal';
 import './InvoiceRenamePage.css';
 
-const DEFAULT_RULE_FIELDS = ['issueDate', 'amount', 'invoiceNumber', 'sellerName'];
+const DEFAULT_RULE_FIELDS = ['issueDate', 'invoiceAmount', 'invoiceNumber', 'sellerName'];
 const STATUS_LABEL_MAP = {
   pending: '待重命名',
   processing: '处理中',
@@ -86,6 +89,8 @@ function InvoiceRenamePage() {
   const toast = useToast();
   const [items, setItems] = useState([]);
   const [ruleFields, setRuleFields] = useState(DEFAULT_RULE_FIELDS);
+  const [showRuleSettings, setShowRuleSettings] = useState(false);
+  const [activeProfile, setActiveProfile] = useState(null);
   const [separator, setSeparator] = useState('_');
   const [isDragging, setIsDragging] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
@@ -112,7 +117,19 @@ function InvoiceRenamePage() {
   const successCount = items.filter((item) => item.status === 'success').length;
   const itemErrorCount = items.filter((item) => item.status === 'error').length;
   const activeStep = downloadUrl || isRenaming ? 3 : items.length ? 2 : 1;
-  const previewName = useMemo(() => buildRulePreview(ruleFields, separator), [ruleFields, separator]);
+  const previewName = useMemo(() => {
+    if (activeProfile) return buildRulePreview(activeProfile.invoiceTypeKey, activeProfile);
+    return buildRulePreview(ruleFields, separator);
+  }, [activeProfile, ruleFields, separator]);
+
+  useEffect(() => {
+    try {
+      const stored = getStoredRuleProfile(DEFAULT_INVOICE_TYPE);
+      setActiveProfile(stored);
+    } catch (e) {
+      setActiveProfile(null);
+    }
+  }, []);
 
   const resetDownloadState = () => {
     setDownloadUrl('');
@@ -180,44 +197,7 @@ function InvoiceRenamePage() {
     }
   };
 
-  const handleFieldChange = (index, nextFieldKey) => {
-    setRuleFields((prev) => prev.map((fieldKey, currentIndex) => (
-      currentIndex === index ? nextFieldKey : fieldKey
-    )));
-    resetDownloadState();
-  };
-
-  const moveField = (index, delta) => {
-    setRuleFields((prev) => {
-      const nextIndex = index + delta;
-      if (nextIndex < 0 || nextIndex >= prev.length) {
-        return prev;
-      }
-      const next = [...prev];
-      const temp = next[index];
-      next[index] = next[nextIndex];
-      next[nextIndex] = temp;
-      return next;
-    });
-    resetDownloadState();
-  };
-
-  const removeField = (index) => {
-    if (ruleFields.length <= 1) {
-      return;
-    }
-    setRuleFields((prev) => prev.filter((_, currentIndex) => currentIndex !== index));
-    resetDownloadState();
-  };
-
-  const addField = () => {
-    const nextField = INVOICE_RULE_FIELDS.find((item) => !ruleFields.includes(item.key));
-    if (!nextField) {
-      return;
-    }
-    setRuleFields((prev) => [...prev, nextField.key]);
-    resetDownloadState();
-  };
+  // ruleFields kept as a lightweight fallback; primary config stored in `activeProfile` via modal
 
   const handleRename = async () => {
     if (!items.length) {
@@ -266,13 +246,21 @@ function InvoiceRenamePage() {
         });
         setStatusText(`正在解析 ${index + 1}/${queue.length}: ${current.file.name}`);
 
-        try {
+          try {
           if (!invoiceData) {
             invoiceData = await extractInvoiceFromPdf(current.file);
           }
 
+          const profileToUse = activeProfile || {
+            invoiceTypeKey: DEFAULT_INVOICE_TYPE,
+            separator,
+            showSequence: false,
+            showFieldLabel: false,
+            items: (ruleFields || DEFAULT_RULE_FIELDS).map((key) => ({ key, enabled: true, dateMode: 'year-month-day', customText: '' }))
+          };
+
           const renamedName = ensureUniqueFileName(
-            buildRenamedFileName(current.file.name, invoiceData, ruleFields, separator),
+            buildRenamedFileName(current.file.name, invoiceData, profileToUse, index + 1),
             usedNames
           );
 
@@ -351,7 +339,7 @@ function InvoiceRenamePage() {
   return (
     <ToolPageShell
       title="PDF 电子发票批量重命名"
-      desc="纯前端本地完成 PDF 发票解析、批量重命名和 ZIP 打包下载，不上传服务器。"
+      desc="本地完成 PDF 发票解析、批量重命名和 ZIP 打包下载，不上传服务器。"
     >
       <div className="invoice-tool">
         <section className="invoice-hero">
@@ -363,7 +351,7 @@ function InvoiceRenamePage() {
               生成后的文件会在浏览器内直接打包下载。
             </p>
             <ul className="invoice-points">
-              <li>不走服务器上行和下行流量，发票文件不会离开当前浏览器。</li>
+              <li>发票文件仅在本地。</li>
               <li>适合标准可提取文本的 PDF 电子发票，扫描件和加密 PDF 可能无法识别。</li>
             </ul>
           </div>
@@ -472,128 +460,18 @@ function InvoiceRenamePage() {
             <div className="invoice-panel-head">
               <div>
                 <h3>2. 设置重命名规则</h3>
-                <p>自由调整字段顺序与分隔符，生成财务更直观的发票文件名。</p>
+                <p>命名规则请在弹窗中配置，页面仅展示命名预览。</p>
               </div>
-            </div>
-
-            <div className="invoice-rule-list">
-              {ruleFields.map((fieldKey, index) => {
-                const occupied = new Set(ruleFields.filter((_, currentIndex) => currentIndex !== index));
-                const options = INVOICE_RULE_FIELDS.filter((item) => item.key === fieldKey || !occupied.has(item.key));
-
-                return (
-                  <div className="invoice-rule-row" key={`${fieldKey}-${index}`}>
-                    <span className="invoice-rule-order">{index + 1}</span>
-                    <select
-                      value={fieldKey}
-                      disabled={isRenaming}
-                      onChange={(event) => handleFieldChange(index, event.target.value)}
-                    >
-                      {options.map((item) => (
-                        <option key={item.key} value={item.key}>
-                          {item.label}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="invoice-rule-row-actions">
-                      <button
-                        className="invoice-mini-btn"
-                        type="button"
-                        disabled={isRenaming || index === 0}
-                        onClick={() => moveField(index, -1)}
-                      >
-                        上移
-                      </button>
-                      <button
-                        className="invoice-mini-btn"
-                        type="button"
-                        disabled={isRenaming || index === ruleFields.length - 1}
-                        onClick={() => moveField(index, 1)}
-                      >
-                        下移
-                      </button>
-                      <button
-                        className="invoice-mini-btn is-danger"
-                        type="button"
-                        disabled={isRenaming || ruleFields.length <= 1}
-                        onClick={() => removeField(index)}
-                      >
-                        移除
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="invoice-rule-toolbar">
-              <button
-                className="invoice-btn invoice-btn-secondary"
-                type="button"
-                disabled={isRenaming || ruleFields.length >= INVOICE_RULE_FIELDS.length}
-                onClick={addField}
-              >
-                添加字段
-              </button>
-
-              <label className="field-block invoice-separator-field">
-                <span>分隔符</span>
-                <input
-                  type="text"
-                  value={separator}
-                  disabled={isRenaming}
-                  maxLength={3}
-                  onChange={(event) => {
-                    setSeparator(event.target.value);
-                    resetDownloadState();
-                  }}
-                />
-              </label>
-
-              <div className="invoice-separator-quick">
+              <div className="invoice-panel-actions">
                 <button
+                  className="invoice-btn invoice-btn-ghost"
                   type="button"
-                  className="invoice-mini-btn"
                   disabled={isRenaming}
                   onClick={() => {
-                    setSeparator('_');
-                    resetDownloadState();
+                    setShowRuleSettings(true);
                   }}
                 >
-                  _
-                </button>
-                <button
-                  type="button"
-                  className="invoice-mini-btn"
-                  disabled={isRenaming}
-                  onClick={() => {
-                    setSeparator('-');
-                    resetDownloadState();
-                  }}
-                >
-                  -
-                </button>
-                <button
-                  type="button"
-                  className="invoice-mini-btn"
-                  disabled={isRenaming}
-                  onClick={() => {
-                    setSeparator(' ');
-                    resetDownloadState();
-                  }}
-                >
-                  空格
-                </button>
-                <button
-                  type="button"
-                  className="invoice-mini-btn"
-                  disabled={isRenaming}
-                  onClick={() => {
-                    setSeparator('');
-                    resetDownloadState();
-                  }}
-                >
-                  无
+                  高级设置
                 </button>
               </div>
             </div>
@@ -721,6 +599,18 @@ function InvoiceRenamePage() {
           )}
         </section>
       </div>
+      {showRuleSettings && (
+        <InvoiceRuleSettingsModal
+          invoiceTypeKey={activeProfile?.invoiceTypeKey || DEFAULT_INVOICE_TYPE}
+          initialProfile={activeProfile}
+          onSave={(normalized) => {
+            setActiveProfile(normalized);
+            setSeparator(normalized.separator || '_');
+            setShowRuleSettings(false);
+          }}
+          onCancel={() => setShowRuleSettings(false)}
+        />
+      )}
     </ToolPageShell>
   );
 }

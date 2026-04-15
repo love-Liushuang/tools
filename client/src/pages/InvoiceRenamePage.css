@@ -142,6 +142,9 @@
   border-radius: 16px;
   border: 1px solid #dbe7f4;
   background: #fff;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
 }
 
 .invoice-panel-head,
@@ -300,9 +303,9 @@
 }
 
 .invoice-rule-list {
+  flex: 1;
   margin-top: 16px;
   display: grid;
-  gap: 12px;
 }
 
 .invoice-rule-row {
@@ -324,16 +327,19 @@
   font-weight: 700;
 }
 
+.invoice-panel-head-status select,
 .invoice-rule-row select,
+.invoice-rule-row input,
+.invoice-separator-field select,
 .invoice-separator-field input {
-  width: 100%;
-  min-height: 42px;
+  min-height: 22px;
   border-radius: 10px;
   border: 1px solid #cfdded;
   padding: 10px 12px;
   background: #fff;
   color: #19304a;
   font-size: 14px;
+  width: auto;
 }
 
 .invoice-rule-toolbar {
@@ -343,7 +349,11 @@
 }
 
 .invoice-separator-field {
-  min-width: 120px;
+    min-width: 120px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
 }
 
 .invoice-preview-box {
@@ -571,4 +581,67 @@
     flex-direction: column;
     align-items: stretch;
   }
+}
+
+/* Modal overlay & drag styles for rule settings modal */
+.invoice-modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.38);
+  z-index: 9999;
+  padding: 20px;
+}
+
+.invoice-rule-row[draggable="true"] {
+  cursor: grab;
+}
+
+.invoice-rule-row[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.invoice-modal .invoice-panel-head h3 {
+  margin: 0;
+}
+
+/* Modal-specific row layout and hover/drag-handle styles */
+.invoice-modal-overlay .invoice-rule-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  transition: background 0.12s ease, transform 0.08s ease, box-shadow 0.12s ease;
+}
+
+.invoice-modal-overlay .invoice-rule-row:hover {
+  background: linear-gradient(180deg, rgba(28,120,220,0.04), rgba(255,255,255,0.6));
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(23,59,93,0.06);
+}
+
+.invoice-modal-overlay .drag-handle {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  color: #6b829a;
+  font-size: 16px;
+  user-select: none;
+  opacity: 0;
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+.invoice-modal-overlay .invoice-rule-row:hover .drag-handle {
+  opacity: 1;
+}
+
+.invoice-modal-overlay .invoice-rule-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
 }
