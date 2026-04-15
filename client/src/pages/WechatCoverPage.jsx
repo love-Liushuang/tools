@@ -49,7 +49,7 @@ function WechatCoverPage () {
     };
 
     return (
-        <ToolPageShell title="微信公众号头图获取" desc="输入公众号文章链接，提取文章封面图地址并预览。">
+        <ToolPageShell title="微信公众号封面获取" desc="输入公众号文章链接，提取文章封面图地址并预览。">
             <div className="div-search-wrap">
                 <label className="field-block">
                     <span>请输入公众号文章链接</span>

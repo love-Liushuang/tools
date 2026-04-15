@@ -343,7 +343,7 @@ function TorrentMagnetPage() {
 
   return (
     <ToolPageShell
-      title="Torrent 转磁力链接"
+      title="种子转磁力链接"
       desc="批量解析 .torrent 文件，本地生成磁力链接，文件不会上传服务器。"
     >
       <div className="upload-box">
