@@ -34,7 +34,7 @@ export const tools = [
     },
     {
         id: 'torrent-magnet',
-        name: 'Torrent 转磁力链接',
+        name: '种子转磁力链接',
         desc: '批量解析 .torrent 文件，生成磁力链接。',
         category: 'encode',
         path: '/tools/torrent-magnet'
@@ -90,8 +90,8 @@ export const tools = [
     },
     {
         id: 'getgzhtoutu',
-        name: '微信公众号头图获取',
-        desc: '输入公众号文章链接，提取头图封面并预览。',
+        name: '微信公众号封面获取',
+        desc: '输入公众号文章链接，提取封面并预览。',
         category: 'image',
         path: '/tools/getgzhtoutu'
     },
