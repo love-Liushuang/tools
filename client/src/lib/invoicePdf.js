@@ -9,9 +9,12 @@ export const DATE_MODE_OPTIONS = [
 export const SEPARATOR_OPTIONS = [
   { key: '_', label: '_' },
   { key: '-', label: '-' },
+  { key: '+', label: '+' },
   { key: ' ', label: '空格' },
   { key: '', label: '无' }
 ];
+
+export const DEFAULT_SEPARATOR = '+';
 
 export const INVOICE_FIELD_MAP = {
   invoiceTypeName: {
@@ -153,48 +156,6 @@ export const INVOICE_FIELD_MAP = {
     kind: 'text',
     sample: '41270119******0533'
   },
-  departureAirport: {
-    key: 'departureAirport',
-    label: '起飞机场',
-    kind: 'text',
-    sample: '深圳T3'
-  },
-  arrivalAirport: {
-    key: 'arrivalAirport',
-    label: '着陆机场',
-    kind: 'text',
-    sample: '北京T3'
-  },
-  flightNumber: {
-    key: 'flightNumber',
-    label: '航班号',
-    kind: 'text',
-    sample: '深航ZH1234'
-  },
-  cabinClass: {
-    key: 'cabinClass',
-    label: '座位等级',
-    kind: 'text',
-    sample: 'S'
-  },
-  takeoffTime: {
-    key: 'takeoffTime',
-    label: '起飞时间',
-    kind: 'datetime',
-    sample: '2024-10-25 22:30'
-  },
-  flightPassengerName: {
-    key: 'flightPassengerName',
-    label: '乘机人姓名',
-    kind: 'text',
-    sample: '李白'
-  },
-  flightPassengerIdNumber: {
-    key: 'flightPassengerIdNumber',
-    label: '乘机人身份证号',
-    kind: 'text',
-    sample: '41270119******0533'
-  },
   customContent: {
     key: 'customContent',
     label: '自定义内容',
@@ -242,24 +203,6 @@ export const INVOICE_TYPE_MAP = {
       'trainPassengerIdNumber',
       'customContent'
     ]
-  },
-  flight: {
-    key: 'flight',
-    label: '飞机发票',
-    fields: [
-      'invoiceNumber',
-      'issueDate',
-      'departureAirport',
-      'arrivalAirport',
-      'flightNumber',
-      'cabinClass',
-      'takeoffTime',
-      'ticketPrice',
-      'totalAmount',
-      'flightPassengerName',
-      'flightPassengerIdNumber',
-      'customContent'
-    ]
   }
 };
 
@@ -269,10 +212,11 @@ export const INVOICE_RULE_FIELDS = Object.values(INVOICE_FIELD_MAP).map((f) => (
 
 // Default selected fields for initial rule profile (standard invoice)
 export const DEFAULT_SELECTED_FIELDS = [
-  'issueDate',
-  'invoiceAmount',
   'invoiceNumber',
-  'sellerName'
+  'issueDate',
+  'buyerName',
+  'sellerName',
+  'totalAmount'
 ];
 
 const FIELD_LABEL_MAP = Object.values(INVOICE_FIELD_MAP).reduce((result, field) => {
@@ -454,7 +398,7 @@ function getPreviewValue(item, options = {}) {
 }
 
 function joinFileNameParts(parts, separator) {
-  const joiner = separator ?? '_';
+  const joiner = separator ?? DEFAULT_SEPARATOR;
   return parts.filter(Boolean).join(joiner);
 }
 
@@ -462,7 +406,7 @@ export function createDefaultRuleProfile(invoiceTypeKey) {
   const invoiceType = INVOICE_TYPE_MAP[invoiceTypeKey] || INVOICE_TYPE_MAP[DEFAULT_INVOICE_TYPE];
   return {
     invoiceTypeKey: invoiceType.key,
-    separator: '_',
+    separator: DEFAULT_SEPARATOR,
     showSequence: false,
     showFieldLabel: false,
     items: invoiceType.fields.map((fieldKey) => {
@@ -533,7 +477,7 @@ export function buildRulePreview(arg1, arg2) {
   // legacy usage: (ruleFieldsArray, separator)
   if (Array.isArray(arg1)) {
     const ruleFields = arg1;
-    const separator = arg2 || '_';
+    const separator = arg2 ?? DEFAULT_SEPARATOR;
     const profile = {
       invoiceTypeKey: DEFAULT_INVOICE_TYPE,
       separator,
@@ -600,7 +544,7 @@ export function buildRenamedFileName(sourceName, invoiceData, profileOrFields, s
   // legacy: profileOrFields is an array of field keys
   if (Array.isArray(profileOrFields)) {
     const ruleFields = profileOrFields;
-    const separator = typeof separatorOrSequence === 'string' ? separatorOrSequence : '_';
+    const separator = typeof separatorOrSequence === 'string' ? separatorOrSequence : DEFAULT_SEPARATOR;
     const profile = {
       invoiceTypeKey: DEFAULT_INVOICE_TYPE,
       separator,
@@ -665,7 +609,7 @@ export function getPreviewLength(invoiceTypeKey, profile) {
 export const RULE_SETTINGS = {
   dateModeOptions: DATE_MODE_OPTIONS,
   separatorOptions: SEPARATOR_OPTIONS,
-  defaultSeparator: '_',
+  defaultSeparator: DEFAULT_SEPARATOR,
   defaultDateMode: 'year-month-day',
   toggles: {
     showSequence: { key: 'showSequence', label: '显示序号', default: false },

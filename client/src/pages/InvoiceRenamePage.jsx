@@ -5,6 +5,7 @@ import { useToast } from '../components/ToastProvider';
 import {
   buildRenamedFileName,
   buildRulePreview,
+  DEFAULT_SEPARATOR,
   ensureUniqueFileName,
   formatExtractedFieldList,
   INVOICE_RULE_FIELDS,
@@ -14,7 +15,7 @@ import {
 import InvoiceRuleSettingsModal from '../components/InvoiceRuleSettingsModal';
 import './InvoiceRenamePage.css';
 
-const DEFAULT_RULE_FIELDS = ['issueDate', 'invoiceAmount', 'invoiceNumber', 'sellerName'];
+const DEFAULT_RULE_FIELDS = ['invoiceNumber', 'issueDate', 'buyerName', 'sellerName', 'totalAmount'];
 const STATUS_LABEL_MAP = {
   pending: '待重命名',
   processing: '处理中',
@@ -91,7 +92,7 @@ function InvoiceRenamePage() {
   const [ruleFields, setRuleFields] = useState(DEFAULT_RULE_FIELDS);
   const [showRuleSettings, setShowRuleSettings] = useState(false);
   const [activeProfile, setActiveProfile] = useState(null);
-  const [separator, setSeparator] = useState('_');
+  const [separator, setSeparator] = useState(DEFAULT_SEPARATOR);
   const [isDragging, setIsDragging] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
   const [statusText, setStatusText] = useState('');
@@ -600,7 +601,7 @@ function InvoiceRenamePage() {
           initialProfile={activeProfile}
           onSave={(normalized) => {
             setActiveProfile(normalized);
-            setSeparator(normalized.separator || '_');
+            setSeparator(normalized.separator ?? DEFAULT_SEPARATOR);
             setShowRuleSettings(false);
           }}
           onCancel={() => setShowRuleSettings(false)}

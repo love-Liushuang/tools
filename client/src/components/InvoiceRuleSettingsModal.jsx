@@ -164,7 +164,7 @@ function InvoiceRuleSettingsModal({ invoiceTypeKey, initialProfile, onSave, onCa
 
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="invoice-btn invoice-btn-ghost" type="button" onClick={onCancel}>取消</button>
-            <button className="invoice-btn invoice-btn-primary" type="button" onClick={handleSave}>保存到本地</button>
+            <button className="invoice-btn invoice-btn-primary" type="button" onClick={handleSave}>确认</button>
           </div>
         </div>
       </div>
