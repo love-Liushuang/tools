@@ -3,7 +3,14 @@ import React from 'react';
 function ChangelogPage () {
     const entries = [
         {
-            version: 'v1.0.13',
+            version: 'v1.12.1',
+            date: '2026-04-16',
+            items: [
+                '修复bug：PDF电子发票批量重命名功能：普通发票命名一些缺少字段。',
+            ],
+        },
+        {
+            version: 'v1.12.0',
             date: '2026-04-15',
             items: [
                 'PDF 电子发票批量重命名 功能上线：支持按发票字段自定义文件名（示例：开票日期、发票金额、发票号码、销售方名称）。',
@@ -13,56 +20,56 @@ function ChangelogPage () {
             ],
         },
         {
-            version: 'v1.0.12',
+            version: 'v1.11.0',
             date: '2026-04-11',
             items: [
                 '微信公众号封面获取 功能上线：输入文章链接可提取并下载封面图片，支持常见文章域名解析与文件名规范化。',
             ],
         },
         {
-            version: 'v1.0.11',
+            version: 'v1.10.0',
             date: '2026-04-06',
             items: [
                 '视频转 GIF / WebP（单线程）：新增单文件处理的转换功能，提供常用参数预设与尺寸限制。',
             ],
         },
         {
-            version: 'v1.0.10',
+            version: 'v1.9.0',
             date: '2026-03-31',
             items: [
                 '视频转 GIF / WebP（多线程）：新增并行转换能力，使用 WebWorker/多实例 FFmpeg 提升批量转换性能（视浏览器与环境能力）。',
             ],
         },
         {
-            version: 'v1.0.9',
+            version: 'v1.8.1',
             date: '2026-03-27',
             items: [
                 'Emoji 页面性能优化：对大列表采用分页加载，显著提升首屏渲染与滚动体验。',
             ],
         },
         {
-            version: 'v1.0.8',
+            version: 'v1.8.0',
             date: '2026-03-23',
             items: [
                 '新增 Emoji 全量列表与专题合集：按主题浏览与筛选，便于查找与复制表情。',
             ],
         },
         {
-            version: 'v1.0.7',
+            version: 'v1.7.0',
             date: '2026-03-21',
             items: [
                 '文件 MD5 批量计算：支持拖拽多文件并同时计算校验值，便于文件完整性校验与核对。',
             ],
         },
         {
-            version: 'v1.0.6',
+            version: 'v1.6.0',
             date: '2026-03-19',
             items: [
                 '网页整页截图：支持完整页面滚动截取并导出图片，适用于长文档或页面存档。',
             ],
         },
         {
-            version: 'v1.0.5',
+            version: 'v1.5.0',
             date: '2026-03-15',
             items: [
                 '实时热点聚合：新增热点聚合展示。',
@@ -70,21 +77,21 @@ function ChangelogPage () {
             ],
         },
         {
-            version: 'v1.0.4',
+            version: 'v1.4.0',
             date: '2026-03-14',
             items: [
                 '种子转磁力链接：解析 .torrent 并生成 magnet 链接，方便分享与使用。',
             ],
         },
         {
-            version: 'v1.0.3',
+            version: 'v1.3.0',
             date: '2026-03-12',
             items: [
                 '文件加密 / 解密（本地）：在浏览器端进行对称加密与解密，文件不出本地，适合敏感文件处理。',
             ],
         },
         {
-            version: 'v1.0.2',
+            version: 'v1.2.0',
             date: '2026-03-11',
             items: [
                 '工具集更新：JSON 工具大全（格式化/压缩/验证）',
@@ -95,7 +102,7 @@ function ChangelogPage () {
             ],
         },
         {
-            version: 'v1.0.1',
+            version: 'v1.1.0',
             date: '2026-03-08',
             items: [
                 '在线图片转换：支持多种图片格式互转（含 WebP/PNG/JPEG）与简单压缩参数。',

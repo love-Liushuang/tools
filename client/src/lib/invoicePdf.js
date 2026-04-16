@@ -382,6 +382,19 @@ function getFieldMeta(fieldKey) {
   return INVOICE_FIELD_MAP[fieldKey] || { key: fieldKey, label: fieldKey, kind: 'text', sample: fieldKey };
 }
 
+function getInvoiceTypeNameValue(invoiceTypeKey, meta) {
+  const sampleValue = cleanFieldValue(meta?.sample || '');
+  if (sampleValue) {
+    return sampleValue;
+  }
+
+  const typeLabel = invoiceTypeKey && INVOICE_TYPE_MAP[invoiceTypeKey]
+    ? INVOICE_TYPE_MAP[invoiceTypeKey].label
+    : '';
+
+  return cleanFieldValue(typeLabel);
+}
+
 function formatRuleItemValue(item, invoiceData, options = {}) {
   const meta = getFieldMeta(item.key);
   const rawValue = item.key === 'customContent'
@@ -389,6 +402,13 @@ function formatRuleItemValue(item, invoiceData, options = {}) {
     : invoiceData?.[item.key] || '';
 
   if (!rawValue) {
+    // special-case: keep preview and final filename consistent for invoice type text
+    if (item.key === 'invoiceTypeName') {
+      const fallback = getInvoiceTypeNameValue(options?.invoiceTypeKey, meta);
+      if (!fallback) return '';
+      return options && options.showFieldLabel ? `${meta.label}${fallback}` : fallback;
+    }
+
     return '';
   }
 
@@ -419,7 +439,9 @@ function getPreviewValue(item, options = {}) {
   if (item.key === 'customContent') {
     return item.customText || meta.sample;
   }
-  const sample = meta.sample || meta.label;
+  const sample = item.key === 'invoiceTypeName'
+    ? getInvoiceTypeNameValue(options?.invoiceTypeKey, meta) || meta.label
+    : meta.sample || meta.label;
   const value = meta.kind === 'date'
     ? formatDateValue(sample, item.dateMode || meta.defaultDateMode || 'year-month-day')
     : sample;
@@ -487,7 +509,10 @@ function buildRulePreviewForProfile(invoiceTypeKey, profile) {
   }
 
   getEnabledRuleItems(activeProfile).forEach((item) => {
-    const value = getPreviewValue(item, { showFieldLabel: activeProfile.showFieldLabel });
+    const value = getPreviewValue(item, {
+      showFieldLabel: activeProfile.showFieldLabel,
+      invoiceTypeKey: activeProfile.invoiceTypeKey
+    });
     if (value) {
       parts.push(value);
     }
@@ -543,7 +568,7 @@ function buildRenamedFileNameDetailed(sourceName, invoiceData, profile, sequence
   let dataPartCount = 0;
   getEnabledRuleItems(profile).forEach((item) => {
     const value = sanitizeFileNamePart(
-      formatRuleItemValue(item, invoiceData, { showFieldLabel: profile?.showFieldLabel })
+      formatRuleItemValue(item, invoiceData, { showFieldLabel: profile?.showFieldLabel, invoiceTypeKey: profile?.invoiceTypeKey })
     );
 
     if (value) {
@@ -647,50 +672,6 @@ export const RULE_SETTINGS = {
     showFieldLabel: { key: 'showFieldLabel', label: '显示字段标签', default: false }
   }
 };
-
-// Local storage helpers for persisting rule profiles per invoice type
-export const RULE_PROFILE_STORAGE_KEY = 'invoice_rename_rule_profiles_v1';
-
-export function loadStoredRuleProfiles() {
-  if (typeof window === 'undefined' || !window.localStorage) {
-    return createDefaultRuleProfiles();
-  }
-
-  try {
-    const raw = localStorage.getItem(RULE_PROFILE_STORAGE_KEY);
-    if (!raw) {
-      const defaults = createDefaultRuleProfiles();
-      localStorage.setItem(RULE_PROFILE_STORAGE_KEY, JSON.stringify(defaults));
-      return defaults;
-    }
-    const parsed = JSON.parse(raw || '{}');
-    const defaults = createDefaultRuleProfiles();
-    return { ...defaults, ...parsed };
-  } catch (e) {
-    return createDefaultRuleProfiles();
-  }
-}
-
-export function saveRuleProfiles(profiles) {
-  if (typeof window === 'undefined' || !window.localStorage) return;
-  try {
-    localStorage.setItem(RULE_PROFILE_STORAGE_KEY, JSON.stringify(profiles || {}));
-  } catch (e) {
-    // ignore
-  }
-}
-
-export function getStoredRuleProfile(invoiceTypeKey) {
-  const profiles = loadStoredRuleProfiles();
-  return profiles[invoiceTypeKey] || createDefaultRuleProfile(invoiceTypeKey);
-}
-
-export function saveRuleProfile(invoiceTypeKey, profile) {
-  const profiles = loadStoredRuleProfiles();
-  profiles[invoiceTypeKey] = validateAndNormalizeProfile(profile, invoiceTypeKey);
-  saveRuleProfiles(profiles);
-  return profiles[invoiceTypeKey];
-}
 
 export function getFieldsForInvoiceType(invoiceTypeKey) {
   const invoiceType = INVOICE_TYPE_MAP[invoiceTypeKey] || INVOICE_TYPE_MAP[DEFAULT_INVOICE_TYPE];

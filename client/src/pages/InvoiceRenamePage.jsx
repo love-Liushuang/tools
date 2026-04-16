@@ -9,7 +9,7 @@ import {
   formatExtractedFieldList,
   INVOICE_RULE_FIELDS,
   DEFAULT_INVOICE_TYPE,
-  getStoredRuleProfile
+  createDefaultRuleProfile
 } from '../lib/invoicePdf';
 import InvoiceRuleSettingsModal from '../components/InvoiceRuleSettingsModal';
 import './InvoiceRenamePage.css';
@@ -123,12 +123,7 @@ function InvoiceRenamePage() {
   }, [activeProfile, ruleFields, separator]);
 
   useEffect(() => {
-    try {
-      const stored = getStoredRuleProfile(DEFAULT_INVOICE_TYPE);
-      setActiveProfile(stored);
-    } catch (e) {
-      setActiveProfile(null);
-    }
+    setActiveProfile(createDefaultRuleProfile(DEFAULT_INVOICE_TYPE));
   }, []);
 
   const resetDownloadState = () => {

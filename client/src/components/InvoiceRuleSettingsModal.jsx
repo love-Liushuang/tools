@@ -5,8 +5,6 @@ import {
   validateAndNormalizeProfile,
   buildRulePreview,
   INVOICE_TYPES,
-  getStoredRuleProfile,
-  saveRuleProfile,
   DEFAULT_INVOICE_TYPE,
   createDefaultRuleProfile
 } from '../lib/invoicePdf';
@@ -14,32 +12,20 @@ import {
 function InvoiceRuleSettingsModal({ invoiceTypeKey, initialProfile, onSave, onCancel }) {
   const startType = invoiceTypeKey || DEFAULT_INVOICE_TYPE;
   const [localType, setLocalType] = useState(startType);
-  const [profile, setProfile] = useState(() => validateAndNormalizeProfile(initialProfile || getStoredRuleProfile(startType), startType));
+  const [profile, setProfile] = useState(() => validateAndNormalizeProfile(initialProfile || createDefaultRuleProfile(startType), startType));
   const [preview, setPreview] = useState('');
   const [dragIndex, setDragIndex] = useState(null);
   const dragOverRef = useRef(null);
 
   useEffect(() => {
-    // when type changes, load stored profile unless an explicit initialProfile was provided
+    // when type changes, load default profile unless an explicit initialProfile was provided
     if (initialProfile && initialProfile.invoiceTypeKey === localType) {
       setProfile(validateAndNormalizeProfile(initialProfile, localType));
       return;
     }
 
-    const stored = getStoredRuleProfile(localType);
-    const normalizedStored = validateAndNormalizeProfile(stored, localType);
-
-    // If stored profile appears to have "all enabled" (likely older default),
-    // replace with the updated default selection for this invoice type to avoid
-    // showing all fields pre-selected in the modal.
-    const allEnabled = Array.isArray(normalizedStored.items) && normalizedStored.items.length > 0 && normalizedStored.items.every((it) => it.enabled === true);
-    if (allEnabled) {
-      const defaults = createDefaultRuleProfile(localType);
-      setProfile(defaults);
-      return;
-    }
-
-    setProfile(normalizedStored);
+    const defaults = createDefaultRuleProfile(localType);
+    setProfile(defaults);
   }, [localType, initialProfile]);
 
   useEffect(() => {
@@ -61,7 +47,6 @@ function InvoiceRuleSettingsModal({ invoiceTypeKey, initialProfile, onSave, onCa
 
   function handleSave() {
     const normalized = validateAndNormalizeProfile(profile, localType);
-    saveRuleProfile(localType, normalized);
     onSave && onSave(normalized);
   }
 
