@@ -4,7 +4,6 @@ import ToolPageShell from '../components/ToolPageShell';
 import { useToast } from '../components/ToastProvider';
 import { countTopicEmojis, emojiTopics } from '../data/emojiTopics';
 import {
-  copyEmojiText,
   createEmojiItems,
   createEmojiLookup,
   findEmojiItem,
@@ -12,6 +11,8 @@ import {
   loadEmojiDataset,
   uniqueEmojiValues
 } from '../lib/emojiUtils';
+import { copyText } from '../lib/tool';
+
 
 function EmojiTopicDetailPage() {
   const { topicId } = useParams();
@@ -125,11 +126,11 @@ function EmojiTopicDetailPage() {
       message = item.code ? `已复制编码 ${item.code}` : `已复制 ${item.emoji}`;
     }
 
-    try {
-      await copyEmojiText(text);
-      toast.success(message);
-    } catch (error) {
-      toast.error('复制失败，请手动复制。');
+    const ok = await copyText(text);
+    if (ok) {
+        toast.success(message);
+    } else {
+        toast.error('复制失败，请手动复制。');
     }
   }, [toast]);
 

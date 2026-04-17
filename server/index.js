@@ -6,6 +6,7 @@ const fs = require('fs');
 const { handleTextLetter } = require('./services/codecService');
 const { getHotData } = require('./services/hotService');
 const { captureWebshot } = require('./services/webshotService');
+const { fetchWechatCover } = require('./services/wechatService');
 const { unlockPdfHandler } = require('./handlers/unlockPdfHandler');
 
 const app = express();
@@ -121,6 +122,64 @@ app.get('/api/hot', async (req, res) => {
   }
 });
 
+app.post('/api/tools/getgzhtoutu', async (req, res) => {
+  sweepRateBuckets();
+  if (isRateLimited(req)) {
+    res.setHeader('Retry-After', '60');
+    return res.status(429).json({ ok: false, error: '请求过于频繁，请稍后再试' });
+  }
+
+  try {
+    const result = await fetchWechatCover(req.body && req.body.url);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ ok: false, error: err.message || '获取失败' });
+  }
+});
+
+app.get('/api/tools/download-img', async (req, res) => {
+  try {
+    const { url } = req.query;
+    if (!url) return res.status(400).send('缺少参数');
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0',
+        Referer: 'https://mp.weixin.qq.com/'
+      }
+    });
+    if (!response.ok) {
+      return res.status(500).send('图片获取失败');
+    }
+    const buffer = await response.arrayBuffer();
+    res.setHeader('Content-Type', 'image/jpeg');
+    res.setHeader('Content-Disposition', 'attachment; filename=cover.jpg');
+    res.send(Buffer.from(buffer));
+  } catch (err) {
+    res.status(500).send('下载失败');
+  }
+});
+app.get('/api/tools/preview-img', async (req, res) => {
+  try {
+    const { url } = req.query;
+    if (!url) return res.status(400).send('缺少参数');
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0',
+        Referer: 'https://mp.weixin.qq.com/'
+      }
+    });
+    if (!response.ok) {
+      return res.status(500).send('图片获取失败');
+    }
+    const buffer = await response.arrayBuffer();
+    // 自动识别类型
+    const contentType = response.headers.get('content-type') || 'image/jpeg';
+    res.setHeader('Content-Type', contentType);
+    res.send(Buffer.from(buffer));
+  } catch (err) {
+    res.status(500).send('预览失败');
+  }
+});
 app.post('/api/webshot', async (req, res) => {
   sweepRateBuckets();
   if (isRateLimited(req)) {

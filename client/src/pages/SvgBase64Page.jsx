@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { copyText } from '../lib/tool';
 import ToolPageShell from '../components/ToolPageShell';
 
 function sanitizeSvg(text) {
@@ -18,28 +19,6 @@ function fromBase64Utf8(base64Text) {
   const binary = atob(base64Text);
   const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
   return new TextDecoder().decode(bytes);
-}
-
-async function copyTextToClipboard(text) {
-  const content = String(text || '');
-  if (!content) {
-    return;
-  }
-
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    await navigator.clipboard.writeText(content);
-    return;
-  }
-
-  const textarea = document.createElement('textarea');
-  textarea.value = content;
-  textarea.style.position = 'fixed';
-  textarea.style.left = '-9999px';
-  document.body.appendChild(textarea);
-  textarea.focus();
-  textarea.select();
-  document.execCommand('copy');
-  textarea.remove();
 }
 
 function downloadText(filename, text, mime = 'text/plain;charset=utf-8') {
@@ -148,11 +127,11 @@ function SvgBase64Page() {
   };
 
   const handleCopy = async () => {
-    try {
-      await copyTextToClipboard(outputText);
-      setInfo('已复制输出内容。');
-    } catch (err) {
-      setError('复制失败，请检查浏览器权限。');
+    const ok = await copyText(outputText);
+    if (ok) {
+        setInfo('已复制输出内容。');
+    } else {
+        setError('复制失败，请检查浏览器权限。');
     }
   };
 
@@ -292,11 +271,11 @@ function SvgBase64Page() {
             <button
               type="button"
               onClick={async () => {
-                try {
-                  await copyTextToClipboard(decodedSvg);
-                  setInfo('已复制 SVG 内容。');
-                } catch (err) {
-                  setError('复制失败，请检查浏览器权限。');
+                const ok = await copyText(decodedSvg);
+                if (ok) {
+                    setInfo('已复制 SVG 内容。');
+                } else {
+                    setError('复制失败，请检查浏览器权限。');
                 }
               }}
               disabled={!decodedSvg}

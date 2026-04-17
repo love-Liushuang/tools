@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
+import { copyText } from '../lib/tool';
 import ToolPageShell from '../components/ToolPageShell';
 
 const utf8Decoder = new TextDecoder('utf-8');
@@ -231,31 +232,6 @@ function buildMagnet(hash, name, size, trackers) {
   return link;
 }
 
-async function copyText(text) {
-  if (navigator.clipboard && window.isSecureContext) {
-    try {
-      await navigator.clipboard.writeText(text);
-      return true;
-    } catch (err) {
-      // fall back below
-    }
-  }
-  try {
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    textarea.setAttribute('readonly', 'true');
-    textarea.style.position = 'fixed';
-    textarea.style.top = '-9999px';
-    document.body.appendChild(textarea);
-    textarea.select();
-    const ok = document.execCommand('copy');
-    textarea.remove();
-    return ok;
-  } catch (err) {
-    return false;
-  }
-}
-
 function TorrentMagnetPage() {
   const inputRef = useRef(null);
   const [files, setFiles] = useState([]);
@@ -367,7 +343,7 @@ function TorrentMagnetPage() {
 
   return (
     <ToolPageShell
-      title="Torrent 转磁力链接"
+      title="种子转磁力链接"
       desc="批量解析 .torrent 文件，本地生成磁力链接，文件不会上传服务器。"
     >
       <div className="upload-box">
