@@ -1,68 +1,68 @@
-# Project Map
+# Project Map / 项目地图
 
-## Repo shape
+## Repo Shape / 仓库结构
 
-- Root package name: `toolbox-site`
-- Frontend: `client/` with React 18 + Vite + React Router
-- Backend: `server/index.js` with Express
-- Root scripts:
-  - `npm run dev` -> start server and client together
-  - `npm run build` -> build `client/`
-  - `npm start` -> serve production app from Node
-- Client scripts:
+- Root package name / 根包名: `toolbox-site`
+- Frontend / 前端: `client/`，使用 React 18 + Vite + React Router
+- Backend / 后端: `server/index.js`，使用 Express
+- Root scripts / 根目录常用命令:
+  - `npm run dev` -> 同时启动 server 和 client
+  - `npm run build` -> 构建 `client/`
+  - `npm start` -> 用 Node 启动生产服务
+- Client scripts / 前端常用命令:
   - `npm --prefix client run dev`
   - `npm --prefix client run build`
 
-## Main integration points
+## Main Integration Points / 主要接入点
 
-- Tool registry: `client/src/data/tools.js`
-  - category list
-  - tool card metadata
-  - featured tool ids
-- Route wiring: `client/src/App.jsx`
-  - imports page components
-  - defines `/tools/*` routes
-  - holds alias redirects
-- Shared layout and chrome:
+- Tool registry / 工具注册表: `client/src/data/tools.js`
+  - category list / 分类列表
+  - tool card metadata / 工具卡片元数据
+  - featured tool ids / 常用工具配置
+- Route wiring / 路由接线: `client/src/App.jsx`
+  - imports page components / 引入页面组件
+  - defines `/tools/*` routes / 定义工具路由
+  - holds alias redirects / 保存别名跳转
+- Shared layout and chrome / 共享布局与外壳:
   - `client/src/components/SiteLayout.jsx`
   - `client/src/components/ToolPageShell.jsx`
   - `client/src/components/PageNotice.jsx`
   - `client/src/components/ToastProvider.jsx`
-- Shared client helpers:
-  - `client/src/lib/tool.js` for `copyText`
-  - other tool-specific helpers live under `client/src/lib/*`
-- Global styling: `client/src/styles.css`
-- Changelog page: `client/src/pages/ChangelogPage.jsx`
+- Shared client helpers / 前端共享工具:
+  - `client/src/lib/tool.js` 提供 `copyText`
+  - 其它工具型 helper 放在 `client/src/lib/*`
+- Global styling / 全局样式: `client/src/styles.css`
+- Changelog page / 更新日志页: `client/src/pages/ChangelogPage.jsx`
 
-## Current tool inventory
+## Current Tool Inventory / 当前工具清单
 
-### Dev
+### Dev / 开发工具
 
 - `json-formatter` -> `/tools/json-formatter`
 
-### Encode
+### Encode / 编码转换
 
 - `base64` -> `/tools/base64`
 - `file-encrypt` -> `/tools/file-encrypt`
 - `torrent-magnet` -> `/tools/torrent-magnet`
 - `md5` -> `/tools/md5`
 
-### Text
+### Text / 文本处理
 
 - `text-stats` -> `/tools/text-stats`
 - `markdown-editor` -> `/tools/markdown-editor`
 - `text-letter` -> `/tools/text-letter`
 - `txt-diff` -> `/tools/txt-diff`
 
-### WPS
+### WPS / 办公文档
 
 - `unlock-pdf` -> `/tools/unlock-pdf`
 
-### Invoice
+### Invoice / 发票工具
 
 - `invoice-pdf-rename` -> `/tools/invoice-pdf-rename`
 
-### Image
+### Image / 图片处理
 
 - `image-convert` -> `/tools/image-convert`
 - `getgzhtoutu` -> `/tools/getgzhtoutu`
@@ -71,47 +71,47 @@
 - `svg-preview` -> `/tools/svg-preview`
 - `webshot` -> `/tools/webshot`
 
-### Video
+### Video / 视频处理
 
 - `video-to-gif` -> `/tools/video-to-gif`
 - `video-to-gif-single` -> `/tools/video-to-gif-single`
 
-### Emoji
+### Emoji / 表情工具
 
 - `emoji-list` -> `/tools/emoji`
 - `emoji-topics` -> `/tools/emoji/topics`
 
-### Special pages
+### Special Pages / 特殊页面
 
-- Home page: `/`
-- Hot trends page: `/hot`
-- Changelog page: `/tools/changelog`
-- Not found page: `client/src/pages/NotFoundPage.jsx`
+- Home page / 首页: `/`
+- Hot trends page / 热点页: `/hot`
+- Changelog page / 更新日志: `/tools/changelog`
+- Not found page / 404 页面: `client/src/pages/NotFoundPage.jsx`
 
-## Usual files to touch by task type
+## Common Files By Task Type / 按任务查看常改文件
 
-### Add or remove a tool
+### Add Or Remove A Tool / 新增或删除工具
 
 - `client/src/data/tools.js`
 - `client/src/App.jsx`
 - `client/src/pages/<ToolName>Page.jsx`
-- `client/src/lib/<toolHelper>.js` if needed
-- `client/src/styles.css` or a page-local stylesheet if the tool already has one
-- `client/src/pages/ChangelogPage.jsx` when the change should be announced
+- `client/src/lib/<toolHelper>.js`，需要时新增
+- `client/src/styles.css` 或工具自己的页面样式文件
+- `client/src/pages/ChangelogPage.jsx`，如果这次改动需要记更新日志
 
-### Update an existing tool
+### Update An Existing Tool / 修改已有工具
 
-- Start from the page file in `client/src/pages/`
-- Read the paired helper under `client/src/lib/` if the page uses one
-- Check `styles.css` for shared classes before adding new CSS
+- 先从 `client/src/pages/` 里的页面文件开始
+- 如果页面用了 `client/src/lib/` 下的 helper，一并阅读
+- 新增 CSS 前先检查 `styles.css` 是否已有可复用类名
 
-### Server-backed features
+### Server-Backed Features / 依赖服务端的功能
 
 - `server/index.js`
-- related client page or helper that calls `/api/*`
+- 调用 `/api/*` 的前端页面或 helper
 
-## Notable routing detail
+## Notable Routing Detail / 路由注意点
 
-- `InvoiceRenamePage` is lazy-loaded in `client/src/App.jsx`
-- Most other pages are imported directly
-- Alias redirects are explicit and should stay readable rather than overly abstract
+- `InvoiceRenamePage` 在 `client/src/App.jsx` 中是懒加载
+- 其它大多数页面是直接 import
+- 别名跳转保持显式、可读，不要过度抽象
