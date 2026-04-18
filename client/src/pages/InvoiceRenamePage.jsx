@@ -11,6 +11,14 @@ import {
   DEFAULT_INVOICE_TYPE,
   createDefaultRuleProfile
 } from '../lib/invoicePdf';
+import {
+  createInvoiceArchiveName,
+  createInvoiceQueueItems,
+  isPdfFile,
+  parseInvoiceFileQueue,
+  prettyBytes,
+  triggerObjectUrlDownload
+} from '../lib/invoicePdfBatch';
 import InvoiceRuleSettingsModal from '../components/InvoiceRuleSettingsModal';
 import './InvoiceRenamePage.css';
 
@@ -23,59 +31,6 @@ const STATUS_LABEL_MAP = {
   renamed: '已重命名',
   error: '失败'
 };
-
-function prettyBytes(bytes) {
-  if (bytes < 1024) {
-    return `${bytes} B`;
-  }
-  if (bytes < 1024 * 1024) {
-    return `${(bytes / 1024).toFixed(1)} KB`;
-  }
-  if (bytes < 1024 * 1024 * 1024) {
-    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-  }
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-}
-
-function sleepToYield() {
-  return new Promise((resolve) => {
-    window.setTimeout(resolve, 0);
-  });
-}
-
-function isPdfFile(file) {
-  if (!file) {
-    return false;
-  }
-  return file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '');
-}
-
-function createQueueItems(fileList) {
-  const seed = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  return Array.from(fileList || []).map((file, index) => ({
-    id: `${seed}-${index}`,
-    file,
-    status: 'pending',
-    renamedName: '',
-    invoiceData: null,
-    error: ''
-  }));
-}
-
-function createArchiveName() {
-  const now = new Date();
-  const pad = (value) => String(value).padStart(2, '0');
-  const stamp = [
-    now.getFullYear(),
-    pad(now.getMonth() + 1),
-    pad(now.getDate()),
-    '_',
-    pad(now.getHours()),
-    pad(now.getMinutes()),
-    pad(now.getSeconds())
-  ].join('');
-  return `发票重命名文件_${stamp}.zip`;
-}
 
 function parseAmountNumber(value) {
   const numeric = Number(String(value || '').replace(/[^\d.-]/g, ''));
@@ -114,8 +69,6 @@ function InvoiceRenamePage() {
   const [error, setError] = useState('');
   const [downloadUrl, setDownloadUrl] = useState('');
   const [downloadName, setDownloadName] = useState('');
-  const [downloadCount, setDownloadCount] = useState(0);
-  const [failedCount, setFailedCount] = useState(0);
 
   useEffect(() => {
     if (!downloadUrl) {
@@ -190,8 +143,6 @@ function InvoiceRenamePage() {
   const resetDownloadState = () => {
     setDownloadUrl('');
     setDownloadName('');
-    setDownloadCount(0);
-    setFailedCount(0);
   };
 
   const patchItem = (id, patch) => {
@@ -217,7 +168,9 @@ function InvoiceRenamePage() {
       return;
     }
 
-    const nextItems = createQueueItems(pdfFiles);
+    const nextItems = createInvoiceQueueItems(pdfFiles, () => ({
+      renamedName: ''
+    }));
     setItems((prev) => [...prev, ...nextItems]);
     resetDownloadState();
     setError('');
@@ -258,51 +211,35 @@ function InvoiceRenamePage() {
   const parseInvoices = async (queue, progressPrefix, statusConfig = {}) => {
     const processingStatus = statusConfig.processingStatus || 'analyzing';
     const successStatus = statusConfig.successStatus || 'analyzed';
-    setStatusText('正在加载 PDF 解析引擎...');
-    const { extractInvoiceFromPdf } = await import('../lib/invoicePdfParser');
-    const parsedResults = [];
-    let successTotal = 0;
-    let failureTotal = 0;
-
-    for (let index = 0; index < queue.length; index += 1) {
-      const current = queue[index];
-      let invoiceData = current.invoiceData;
-
-      patchItem(current.id, {
-        status: processingStatus,
-        error: ''
-      });
-      setStatusText(`${progressPrefix} ${index + 1}/${queue.length}: ${current.file.name}`);
-
-      try {
-        if (!invoiceData) {
-          invoiceData = await extractInvoiceFromPdf(current.file);
-        }
-
-        successTotal += 1;
-        parsedResults.push({
-          ...current,
-          invoiceData
-        });
+    const { results, successTotal, failureTotal } = await parseInvoiceFileQueue(queue, {
+      onEngineLoading() {
+        setStatusText('正在加载 PDF 解析引擎...');
+      },
+      onItemStart({ current, index, total }) {
         patchItem(current.id, {
-          status: current.renamedName && successStatus === 'analyzed' ? 'renamed' : successStatus,
-          invoiceData,
+          status: processingStatus,
           error: ''
         });
-      } catch (parseError) {
-        failureTotal += 1;
+        setStatusText(`${progressPrefix} ${index + 1}/${total}: ${current.file.name}`);
+      },
+      onItemSuccess({ current }) {
+        patchItem(current.id, {
+          status: current.renamedName && successStatus === 'analyzed' ? 'renamed' : successStatus,
+          invoiceData: current.invoiceData,
+          error: ''
+        });
+      },
+      onItemError({ current, error: parseError }) {
         patchItem(current.id, {
           status: 'error',
-          invoiceData: invoiceData || null,
+          invoiceData: current.invoiceData || null,
           error: parseError.message || '解析失败'
         });
       }
-
-      await sleepToYield();
-    }
+    });
 
     return {
-      parsedResults,
+      parsedResults: results,
       successTotal,
       failureTotal
     };
@@ -437,11 +374,9 @@ function InvoiceRenamePage() {
           });
         }
 
-        await sleepToYield();
       }
 
       if (successTotal === 0) {
-        setFailedCount(failureTotal);
         setError('没有生成可下载的重命名结果，请检查失败原因后重试。');
         setStatusText('');
         return;
@@ -462,9 +397,7 @@ function InvoiceRenamePage() {
 
       const nextDownloadUrl = URL.createObjectURL(archiveBlob);
       setDownloadUrl(nextDownloadUrl);
-      setDownloadName(createArchiveName());
-      setDownloadCount(successTotal);
-      setFailedCount(failureTotal);
+      setDownloadName(createInvoiceArchiveName('发票重命名文件'));
       setStatusText(
         failureTotal > 0
           ? `处理完成：成功 ${successTotal} 个，失败 ${failureTotal} 个。`
@@ -480,20 +413,12 @@ function InvoiceRenamePage() {
   };
 
   const handleDownload = () => {
-    if (!downloadUrl) {
-      return;
-    }
-    const link = document.createElement('a');
-    link.href = downloadUrl;
-    link.download = downloadName || createArchiveName();
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+    triggerObjectUrlDownload(downloadUrl, downloadName || createInvoiceArchiveName('发票重命名文件'));
   };
 
   return (
     <ToolPageShell
-      title="PDF电子发票 批量重命名 与 金额汇总"
+      title="PDF 电子发票批量重命名与金额汇总"
       desc="本地完成 PDF 发票解析、金额汇总、批量重命名和 ZIP 打包下载。"
     >
       <div className="invoice-tool">

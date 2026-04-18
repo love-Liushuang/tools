@@ -82,6 +82,13 @@ export const tools = [
         path: '/tools/invoice-pdf-rename'
     },
     {
+        id: 'invoice-pdf-dedup',
+        name: 'PDF 电子发票批量去重',
+        desc: '本地批量识别电子发票并统计重复，支持下载去重后的发票压缩包。',
+        category: 'invoice',
+        path: '/tools/invoice-pdf-dedup'
+    },
+    {
         id: 'image-convert',
         name: '在线图片转换',
         desc: '支持 WebP/PNG/JPG 批量转换与尺寸限制。',

@@ -3,6 +3,13 @@ import React from 'react';
 function ChangelogPage () {
     const entries = [
         {
+            version: 'v1.12.3',
+            date: '2026-04-18',
+            items: [
+                'PDF电子发票批量去重 功能上线：支持批量上传发票、执行重复统计、展示去重表格，并下载去重后的发票压缩包。',
+            ],
+        },
+        {
             version: 'v1.12.2',
             date: '2026-04-18',
             items: [
