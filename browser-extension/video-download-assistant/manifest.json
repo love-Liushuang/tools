@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "BoxTools 视频下载助手",
+  "name": "ABIGBOOK 视频下载助手",
   "description": "本地捕获当前网页的视频直链、HLS 与 Bilibili DASH 信息，不依赖第三方解析服务。",
   "version": "0.1.0",
   "permissions": [
