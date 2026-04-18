@@ -1,4 +1,0 @@
-interface:
-  display_name: "Toolbox Site Project / 工具站项目"
-  short_description: "在 React + Node 工具站项目内开发、修复与维护"
-  default_prompt: "在这个 tools 工具站仓库内工作时，保持现有页面壳、工具注册、命名方式、中文文案和验证习惯，不做过度抽象。"

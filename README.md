@@ -48,24 +48,6 @@ npm start
 └─ package.json           # 根脚本（统一启动）
 ```
 
-## 5. Codex 技能
-
-项目内置了团队共享技能：`.codex/skills/toolbox-site-project/`。
-
-为了让 Codex 优先读取项目里的技能，而不是用户目录下的全局技能，建议在当前设备上设置：
-
-```bash
-export CODEX_HOME="/Users/liushuang/Documents/-------网站服务器部署文件【备份】/tools/.codex"
-```
-
-设置后重启 Codex，即可自动发现这个项目自带的技能。
-
-如果需要确认是否生效，可以执行：
-
-```bash
-echo $CODEX_HOME
-```
-
 ## 部署说明（摘要）
 - 0、服务器基础依赖（一次）
   - apt update
