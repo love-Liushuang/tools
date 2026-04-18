@@ -77,9 +77,16 @@ export const tools = [
     {
         id: 'invoice-pdf-rename',
         name: 'PDF 电子发票批量重命名',
-        desc: '本地批量重命名 PDF 电子发票，按日期/金额/号码/销售方自动命名并打包下载。',
+        desc: '本地批量解析 PDF 电子发票，支持金额汇总、重命名并打包下载。',
         category: 'invoice',
         path: '/tools/invoice-pdf-rename'
+    },
+    {
+        id: 'invoice-pdf-dedup',
+        name: 'PDF 电子发票批量去重',
+        desc: '本地批量识别电子发票并统计重复，支持下载去重后的发票压缩包。',
+        category: 'invoice',
+        path: '/tools/invoice-pdf-dedup'
     },
     {
         id: 'image-convert',
