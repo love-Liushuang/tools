@@ -1,10 +1,10 @@
 export const categories = [
     { key: 'all', label: '全部工具' },
+    { key: 'invoice', label: '发票工具' },
     { key: 'image', label: '图片处理' },
     { key: 'video', label: '视频处理' },
     { key: 'text', label: '文本处理' },
-    { key: 'wps', label: 'WPS' },
-    { key: 'invoice', label: '发票工具' },
+    { key: 'wps', label: '文档 / PDF' },
     { key: 'encode', label: '编码转换' },
     { key: 'emoji', label: 'Emoji 表情' },
     { key: 'dev', label: '开发工具' },
@@ -15,22 +15,15 @@ export const tools = [
         id: 'json-formatter', // https://wejson.cn/
         name: 'JSON 工具大全',
         desc: '格式化/压缩/校验/排序/Tree/JSONPath/生成类型等。',
-        category: 'dev',
+        category: ['dev', 'text'],
         path: '/tools/json-formatter'
     },
     {
         id: 'url-codec',
-        name: 'URL 编码/解码',
-        desc: '合并 URL Encode / Decode，支持完整 URL、参数文本和表单 + 空格互转。',
-        category: 'dev',
+        name: '编码/解码工具',
+        desc: '统一处理 URL 与 Base64 编解码，支持完整 URL、参数文本和表单 + 空格互转。',
+        category: ['dev', 'encode', 'text'],
         path: '/tools/url-codec'
-    },
-    {
-        id: 'base64',
-        name: 'Base64 编解码',
-        desc: '支持中文文本的 Base64 转换。',
-        category: 'encode',
-        path: '/tools/base64'
     },
     {
         id: 'file-encrypt',
@@ -64,7 +57,7 @@ export const tools = [
         id: 'text-letter',
         name: '文本加密为字母',
         desc: '在文本与字母密文之间转换。',
-        category: 'text',
+        category: ['text', 'encode'],
         path: '/tools/text-letter'
     },
     {
@@ -85,14 +78,14 @@ export const tools = [
         id: 'invoice-pdf-rename',
         name: 'PDF 电子发票批量重命名',
         desc: '本地批量解析 PDF 电子发票，支持金额汇总、重命名并打包下载。',
-        category: 'invoice',
+        category: ['invoice', 'wps'],
         path: '/tools/invoice-pdf-rename'
     },
     {
         id: 'invoice-pdf-dedup',
         name: 'PDF 电子发票批量去重',
         desc: '本地批量识别电子发票并统计重复，支持下载去重后的发票压缩包。',
-        category: 'invoice',
+        category: ['invoice', 'wps'],
         path: '/tools/invoice-pdf-dedup'
     },
     {
@@ -113,21 +106,21 @@ export const tools = [
         id: 'svg-base64',
         name: 'SVG 转 Base64',
         desc: '将 SVG 转为 Base64 / Data URI，并支持预览与复制。',
-        category: 'image',
+        category: ['image', 'encode', 'dev'],
         path: '/tools/svg-base64'
     },
     {
         id: 'svg-path',
         name: 'SVG Path 预览',
         desc: '粘贴 path 的 d 或 <path>，自动计算 viewBox 并预览。',
-        category: 'image',
+        category: ['image', 'dev'],
         path: '/tools/svg-path'
     },
     {
         id: 'svg-preview',
         name: 'SVG 图片预览',
         desc: '粘贴/导入 SVG 代码，实时预览并支持下载。',
-        category: 'image',
+        category: ['image', 'dev'],
         path: '/tools/svg-preview'
     },
     {
@@ -141,35 +134,35 @@ export const tools = [
         id: 'video-to-gif',
         name: '视频转 GIF / WebP（多线程）',
         desc: '本地视频转 GIF 或 Animated WebP，多线程版本，速度更快。',
-        category: 'video',
+        category: ['video', 'image'],
         path: '/tools/video-to-gif'
     },
     {
         id: 'video-to-gif-single',
         name: '视频转 GIF / WebP（单线程）',
         desc: '本地视频转 GIF 或 Animated WebP，单线程版本，兼容要求更低。',
-        category: 'video',
+        category: ['video', 'image'],
         path: '/tools/video-to-gif-single'
     },
     {
         id: 'md5',
         name: '文件 MD5 批量计算',
         desc: '纯本地批量计算文件 MD5，支持拖拽、多选和复制结果。',
-        category: 'encode',
+        category: ['encode', 'dev'],
         path: '/tools/md5'
     },
     {
         id: 'emoji-list',
         name: 'Emoji 全量列表',
         desc: '全量 Emoji，支持中文搜索、分组浏览和点击复制。',
-        category: 'emoji',
+        category: ['emoji', 'text'],
         path: '/tools/emoji'
     },
     {
         id: 'emoji-topics',
         name: 'Emoji 专题合集',
         desc: '按节日、场景和内容主题整理 Emoji，适合运营与设计快速取用。',
-        category: 'emoji',
+        category: ['emoji', 'text'],
         path: '/tools/emoji/topics'
     }
 ];

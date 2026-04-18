@@ -3,7 +3,6 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import SiteLayout from './components/SiteLayout';
 import HomePage from './pages/HomePage';
 import JsonFormatterPage from './pages/JsonFormatterPage';
-import Base64Page from './pages/Base64Page';
 import TextStatsPage from './pages/TextStatsPage';
 import TextLetterPage from './pages/TextLetterPage';
 import TextDiffPage from './pages/TextDiffPage';
@@ -77,7 +76,7 @@ function App() {
           <Route path="tools/url-codec" element={<UrlCodecPage />} />
           <Route path="tools/urlencode" element={<Navigate to="/tools/url-codec" replace />} />
           <Route path="tools/urldecode" element={<Navigate to="/tools/url-codec" replace />} />
-          <Route path="tools/base64" element={<Base64Page />} />
+          <Route path="tools/base64" element={<UrlCodecPage initialCodec="base64" />} />
           <Route path="tools/file-encrypt" element={<FileEncryptPage />} />
           <Route path="tools/text-stats" element={<TextStatsPage />} />
           <Route path="tools/text-letter" element={<TextLetterPage />} />

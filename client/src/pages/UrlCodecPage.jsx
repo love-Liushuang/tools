@@ -1,7 +1,20 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import ToolPageShell from '../components/ToolPageShell';
 
-const MODE_OPTIONS = [
+const CODEC_OPTIONS = [
+  {
+    value: 'url',
+    title: 'URL',
+    desc: '适合链接、参数和值的 URL 编码与解码。'
+  },
+  {
+    value: 'base64',
+    title: 'Base64',
+    desc: '适合 UTF-8 文本和中文内容的 Base64 转换。'
+  }
+];
+
+const URL_MODE_OPTIONS = [
   {
     value: 'component',
     title: '参数 / 文本',
@@ -14,26 +27,42 @@ const MODE_OPTIONS = [
   }
 ];
 
-const EXAMPLES = [
-  {
-    label: '查询参数',
-    mode: 'component',
-    plusAsSpace: false,
-    value: 'keyword=前端 工具&redirect=https://example.com/搜索?q=中文'
-  },
-  {
-    label: '完整链接',
-    mode: 'uri',
-    plusAsSpace: false,
-    value: 'https://example.com/search?q=中文 空格&tab=dev#section'
-  },
-  {
-    label: '表单值',
-    mode: 'component',
-    plusAsSpace: true,
-    value: '姓名=张三 李四&城市=上海+北京'
-  }
-];
+const EXAMPLES = {
+  url: [
+    {
+      label: '查询参数',
+      mode: 'component',
+      plusAsSpace: false,
+      value: 'keyword=前端 工具&redirect=https://example.com/搜索?q=中文'
+    },
+    {
+      label: '完整链接',
+      mode: 'uri',
+      plusAsSpace: false,
+      value: 'https://example.com/search?q=中文 空格&tab=dev#section'
+    },
+    {
+      label: '表单值',
+      mode: 'component',
+      plusAsSpace: true,
+      value: '姓名=张三 李四&城市=上海+北京'
+    }
+  ],
+  base64: [
+    {
+      label: '中文文本',
+      value: '你好，工具站！'
+    },
+    {
+      label: 'JSON 字符串',
+      value: '{"name":"toolbox","lang":"zh-CN","enabled":true}'
+    },
+    {
+      label: 'URL 文本',
+      value: 'https://example.com/search?q=中文 空格&tab=dev'
+    }
+  ]
+};
 
 function countLines(text) {
   if (!text) {
@@ -60,6 +89,21 @@ function decodeUrlText(text, { mode, plusAsSpace }) {
   return decodeURIComponent(normalized);
 }
 
+function toBase64(text) {
+  const bytes = new TextEncoder().encode(text);
+  let binary = '';
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary);
+}
+
+function fromBase64(base64Text) {
+  const binary = atob(base64Text);
+  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+
 async function copyTextToClipboard(text) {
   const content = String(text || '');
   if (!content) {
@@ -82,7 +126,32 @@ async function copyTextToClipboard(text) {
   textarea.remove();
 }
 
-function UrlCodecPage() {
+function getActiveModeLabel(codecType, mode) {
+  if (codecType === 'base64') {
+    return 'Base64';
+  }
+
+  return mode === 'uri' ? '完整 URL' : '参数 / 文本';
+}
+
+function getInputPlaceholder(codecType, mode) {
+  if (codecType === 'base64') {
+    return '请输入要进行 Base64 编码或解码的文本';
+  }
+
+  return mode === 'uri' ? 'https://example.com/search?q=中文 空格' : 'name=张三&city=上海 北京';
+}
+
+function getInputMeta(codecType) {
+  if (codecType === 'base64') {
+    return '粘贴原始文本或 Base64 字符串';
+  }
+
+  return '粘贴原始文本、参数串或完整 URL';
+}
+
+function UrlCodecPage({ initialCodec = 'url' }) {
+  const [codecType, setCodecType] = useState(initialCodec === 'base64' ? 'base64' : 'url');
   const [mode, setMode] = useState('component');
   const [plusAsSpace, setPlusAsSpace] = useState(false);
   const [input, setInput] = useState('');
@@ -91,7 +160,26 @@ function UrlCodecPage() {
   const [error, setError] = useState('');
   const [lastAction, setLastAction] = useState('未执行');
 
-  const activeMode = MODE_OPTIONS.find((item) => item.value === mode) || MODE_OPTIONS[0];
+  const activeMode = URL_MODE_OPTIONS.find((item) => item.value === mode) || URL_MODE_OPTIONS[0];
+  const activeCodec = CODEC_OPTIONS.find((item) => item.value === codecType) || CODEC_OPTIONS[0];
+  const activeExamples = EXAMPLES[codecType] || [];
+  const activeModeLabel = getActiveModeLabel(codecType, mode);
+
+  const notes = useMemo(() => {
+    if (codecType === 'base64') {
+      return [
+        'Base64 模式支持 UTF-8 文本，中文、Emoji 和 JSON 字符串都可以直接编码解码。',
+        '如果输入不是合法 Base64，解码时会直接提示失败，避免产生误导结果。',
+        'SVG 转 Base64、Data URI 预览这类场景仍建议使用独立的 SVG 转 Base64 工具。'
+      ];
+    }
+
+    return [
+      '参数 / 文本 模式适合编码单个值或查询参数，默认行为更接近常见 urlencode/urldecode 工具。',
+      '完整 URL 模式会保留 :、/、?、& 等结构字符，适合整条链接。',
+      '开启表单模式后，编码时空格会转成 +，解码时 + 会还原为空格。'
+    ];
+  }, [codecType]);
 
   const clearFeedback = () => {
     setMessage('');
@@ -107,14 +195,18 @@ function UrlCodecPage() {
     }
 
     try {
-      setOutput(encodeUrlText(input, { mode, plusAsSpace }));
+      const result = codecType === 'base64'
+        ? toBase64(input)
+        : encodeUrlText(input, { mode, plusAsSpace });
+
+      setOutput(result);
       setLastAction('编码');
       setError('');
       setMessage('编码完成。');
     } catch (err) {
       setOutput('');
       setMessage('');
-      setError('编码失败，请检查输入内容。');
+      setError(codecType === 'base64' ? '编码失败，请检查输入。' : '编码失败，请检查输入内容。');
     }
   };
 
@@ -127,14 +219,18 @@ function UrlCodecPage() {
     }
 
     try {
-      setOutput(decodeUrlText(input, { mode, plusAsSpace }));
+      const result = codecType === 'base64'
+        ? fromBase64(input)
+        : decodeUrlText(input, { mode, plusAsSpace });
+
+      setOutput(result);
       setLastAction('解码');
       setError('');
       setMessage('解码完成。');
     } catch (err) {
       setOutput('');
       setMessage('');
-      setError('解码失败，请确认输入是合法的 URL 编码内容。');
+      setError(codecType === 'base64' ? '解码失败，请确认输入是合法 Base64。' : '解码失败，请确认输入是合法的 URL 编码内容。');
     }
   };
 
@@ -183,8 +279,11 @@ function UrlCodecPage() {
   };
 
   const applyExample = (example) => {
-    setMode(example.mode);
-    setPlusAsSpace(example.plusAsSpace);
+    if (codecType === 'url') {
+      setMode(example.mode || 'component');
+      setPlusAsSpace(Boolean(example.plusAsSpace));
+    }
+
     setInput(example.value);
     setOutput('');
     setLastAction('未执行');
@@ -193,30 +292,55 @@ function UrlCodecPage() {
 
   return (
     <ToolPageShell
-      title="URL 编码 / 解码"
-      desc="合并 URL Encode / Decode，支持完整 URL、参数文本，以及表单场景的空格与 + 互转。"
+      title="编码 / 解码工具"
+      desc="统一提供 URL 与 Base64 编解码，保留轻量输入输出、示例、复制与回填能力。"
     >
       <div className="urlcodec-shell">
-        <div className="urlcodec-mode-row">
-          {MODE_OPTIONS.map((item) => (
-            <button
-              key={item.value}
-              type="button"
-              className={`urlcodec-mode-btn${mode === item.value ? ' is-active' : ''}`}
-              onClick={() => {
-                setMode(item.value);
-                clearFeedback();
-              }}
-            >
-              <strong>{item.title}</strong>
-              <span>{item.desc}</span>
-            </button>
-          ))}
+        <div className="urlcodec-section">
+          <p className="urlcodec-section-label">编码类型</p>
+          <div className="urlcodec-mode-row">
+            {CODEC_OPTIONS.map((item) => (
+              <button
+                key={item.value}
+                type="button"
+                className={`urlcodec-mode-btn${codecType === item.value ? ' is-active' : ''}`}
+                onClick={() => {
+                  setCodecType(item.value);
+                  clearFeedback();
+                }}
+              >
+                <strong>{item.title}</strong>
+                <span>{item.desc}</span>
+              </button>
+            ))}
+          </div>
         </div>
+
+        {codecType === 'url' ? (
+          <div className="urlcodec-section">
+            <p className="urlcodec-section-label">URL 处理方式</p>
+            <div className="urlcodec-mode-row">
+              {URL_MODE_OPTIONS.map((item) => (
+                <button
+                  key={item.value}
+                  type="button"
+                  className={`urlcodec-mode-btn${mode === item.value ? ' is-active' : ''}`}
+                  onClick={() => {
+                    setMode(item.value);
+                    clearFeedback();
+                  }}
+                >
+                  <strong>{item.title}</strong>
+                  <span>{item.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         <div className="urlcodec-toolbar">
           <div className="urlcodec-chip-row">
-            {EXAMPLES.map((example) => (
+            {activeExamples.map((example) => (
               <button
                 key={example.label}
                 type="button"
@@ -228,18 +352,20 @@ function UrlCodecPage() {
             ))}
           </div>
 
-          <label className="check-label">
-            <input
-              type="checkbox"
-              checked={plusAsSpace}
-              disabled={mode !== 'component'}
-              onChange={(event) => {
-                setPlusAsSpace(event.target.checked);
-                clearFeedback();
-              }}
-            />
-            表单模式：空格与 <code>+</code> 互转
-          </label>
+          {codecType === 'url' ? (
+            <label className="check-label">
+              <input
+                type="checkbox"
+                checked={plusAsSpace}
+                disabled={mode !== 'component'}
+                onChange={(event) => {
+                  setPlusAsSpace(event.target.checked);
+                  clearFeedback();
+                }}
+              />
+              表单模式：空格与 <code>+</code> 互转
+            </label>
+          ) : null}
         </div>
 
         <div className="urlcodec-grid">
@@ -247,9 +373,9 @@ function UrlCodecPage() {
             <div className="urlcodec-panel-head">
               <div>
                 <h2 className="urlcodec-panel-title">输入区</h2>
-                <p className="urlcodec-panel-meta">粘贴原始文本、参数串或完整 URL</p>
+                <p className="urlcodec-panel-meta">{getInputMeta(codecType)}</p>
               </div>
-              <span className="urlcodec-panel-tag">{activeMode.title}</span>
+              <span className="urlcodec-panel-tag">{activeCodec.title}</span>
             </div>
             <textarea
               className="mono-textarea urlcodec-textarea"
@@ -258,7 +384,7 @@ function UrlCodecPage() {
                 setInput(event.target.value);
                 clearFeedback();
               }}
-              placeholder={mode === 'uri' ? 'https://example.com/search?q=中文 空格' : 'name=张三&city=上海 北京'}
+              placeholder={getInputPlaceholder(codecType, mode)}
             />
           </section>
 
@@ -318,20 +444,14 @@ function UrlCodecPage() {
           </div>
           <div className="stat-box">
             <p>当前模式</p>
-            <strong>{mode === 'uri' ? 'URL' : '参数'}</strong>
+            <strong>{activeModeLabel}</strong>
           </div>
         </div>
 
         <div className="urlcodec-note-list">
-          <p>
-            <strong>参数 / 文本</strong> 模式适合编码单个值或查询参数，保留最少字符，默认行为更接近常见
-            <code>urlencode/urldecode</code> 工具。
-          </p>
-          <p>
-            <strong>完整 URL</strong> 模式会保留 <code>:</code>、<code>/</code>、<code>?</code>、<code>&</code>{' '}
-            等结构字符，适合整条链接。
-          </p>
-          <p>开启表单模式后，编码时空格会转成 <code>+</code>，解码时 <code>+</code> 会还原为空格。</p>
+          {notes.map((note) => (
+            <p key={note}>{note}</p>
+          ))}
         </div>
       </div>
     </ToolPageShell>
