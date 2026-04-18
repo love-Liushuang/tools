@@ -1,0 +1,4 @@
+interface:
+  display_name: "Toolbox Site Project"
+  short_description: "Work inside the React and Node toolbox site repo"
+  default_prompt: "Use this repo's existing page shell, data registry, naming, and validation habits when adding or updating tools."
