@@ -3,6 +3,13 @@ import React from 'react';
 function ChangelogPage () {
     const entries = [
         {
+            version: 'v1.12.2',
+            date: '2026-04-18',
+            items: [
+                'PDF电子发票批量重命名：新增发票金额汇总功能，支持批量上传多张 PDF 发票并统计发票金额、发票税额和价税合计。',
+            ],
+        },
+        {
             version: 'v1.12.1',
             date: '2026-04-16',
             items: [

@@ -8,7 +8,6 @@ import {
   DEFAULT_SEPARATOR,
   ensureUniqueFileName,
   formatExtractedFieldList,
-  INVOICE_RULE_FIELDS,
   DEFAULT_INVOICE_TYPE,
   createDefaultRuleProfile
 } from '../lib/invoicePdf';
@@ -17,9 +16,11 @@ import './InvoiceRenamePage.css';
 
 const DEFAULT_RULE_FIELDS = ['invoiceNumber', 'issueDate', 'buyerName', 'sellerName', 'totalAmount'];
 const STATUS_LABEL_MAP = {
-  pending: '待重命名',
-  processing: '处理中',
-  success: '已完成',
+  pending: '待处理',
+  analyzing: '识别中',
+  analyzed: '已识别',
+  renaming: '重命名中',
+  renamed: '已重命名',
   error: '失败'
 };
 
@@ -76,6 +77,19 @@ function createArchiveName() {
   return `发票重命名文件_${stamp}.zip`;
 }
 
+function parseAmountNumber(value) {
+  const numeric = Number(String(value || '').replace(/[^\d.-]/g, ''));
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function formatAmountNumber(value) {
+  return Number.isFinite(value) ? value.toFixed(2) : '--';
+}
+
+function getInvoiceAmountValue(invoiceData) {
+  return invoiceData?.invoiceAmount || invoiceData?.amount || '';
+}
+
 function StepItem({ active, done, index, label }) {
   return (
     <div className={active ? 'invoice-step is-active' : done ? 'invoice-step is-done' : 'invoice-step'}>
@@ -94,6 +108,7 @@ function InvoiceRenamePage() {
   const [activeProfile, setActiveProfile] = useState(null);
   const [separator, setSeparator] = useState(DEFAULT_SEPARATOR);
   const [isDragging, setIsDragging] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
   const [statusText, setStatusText] = useState('');
   const [error, setError] = useState('');
@@ -115,13 +130,58 @@ function InvoiceRenamePage() {
     () => items.reduce((sum, item) => sum + item.file.size, 0),
     [items]
   );
-  const successCount = items.filter((item) => item.status === 'success').length;
+  const isBusy = isAnalyzing || isRenaming;
+  const recognizedFileCount = items.filter((item) => Boolean(item.invoiceData)).length;
   const itemErrorCount = items.filter((item) => item.status === 'error').length;
-  const activeStep = downloadUrl || isRenaming ? 3 : items.length ? 2 : 1;
+  const hasProcessedResult = items.some((item) => item.invoiceData || item.error);
+  const activeStep = downloadUrl || isBusy || hasProcessedResult ? 3 : items.length ? 2 : 1;
   const previewName = useMemo(() => {
     if (activeProfile) return buildRulePreview(activeProfile.invoiceTypeKey, activeProfile);
     return buildRulePreview(ruleFields, separator);
   }, [activeProfile, ruleFields, separator]);
+  const amountSummary = useMemo(() => {
+    const rows = items.map((item, index) => {
+      const invoiceAmount = parseAmountNumber(getInvoiceAmountValue(item.invoiceData));
+      const taxAmount = parseAmountNumber(item.invoiceData?.taxAmount);
+      const totalAmount = parseAmountNumber(item.invoiceData?.totalAmount);
+      return {
+        id: item.id,
+        index: index + 1,
+        fileName: item.file.name,
+        invoiceNumber: item.invoiceData?.invoiceNumber || '',
+        issueDate: item.invoiceData?.issueDate || '',
+        invoiceAmount,
+        taxAmount,
+        totalAmount,
+        hasAnyAmount: invoiceAmount !== null || taxAmount !== null || totalAmount !== null,
+        status: item.status,
+        error: item.error
+      };
+    });
+
+    return rows.reduce((result, row) => {
+      result.rows.push(row);
+      if (row.hasAnyAmount) {
+        result.recognizedCount += 1;
+      }
+      if (row.invoiceAmount !== null) {
+        result.invoiceAmountTotal += row.invoiceAmount;
+      }
+      if (row.taxAmount !== null) {
+        result.taxAmountTotal += row.taxAmount;
+      }
+      if (row.totalAmount !== null) {
+        result.totalAmountTotal += row.totalAmount;
+      }
+      return result;
+    }, {
+      rows: [],
+      recognizedCount: 0,
+      invoiceAmountTotal: 0,
+      taxAmountTotal: 0,
+      totalAmountTotal: 0
+    });
+  }, [items]);
 
   useEffect(() => {
     setActiveProfile(createDefaultRuleProfile(DEFAULT_INVOICE_TYPE));
@@ -145,7 +205,7 @@ function InvoiceRenamePage() {
   };
 
   const handleAddFiles = (fileList) => {
-    if (isRenaming) {
+    if (isBusy) {
       return;
     }
 
@@ -171,7 +231,7 @@ function InvoiceRenamePage() {
   };
 
   const handleRemove = (id) => {
-    if (isRenaming) {
+    if (isBusy) {
       return;
     }
 
@@ -180,7 +240,7 @@ function InvoiceRenamePage() {
   };
 
   const handleClear = () => {
-    if (isRenaming) {
+    if (isBusy) {
       return;
     }
 
@@ -194,6 +254,107 @@ function InvoiceRenamePage() {
   };
 
   // ruleFields kept as a lightweight fallback; primary config stored in `activeProfile` via modal
+
+  const parseInvoices = async (queue, progressPrefix, statusConfig = {}) => {
+    const processingStatus = statusConfig.processingStatus || 'analyzing';
+    const successStatus = statusConfig.successStatus || 'analyzed';
+    setStatusText('正在加载 PDF 解析引擎...');
+    const { extractInvoiceFromPdf } = await import('../lib/invoicePdfParser');
+    const parsedResults = [];
+    let successTotal = 0;
+    let failureTotal = 0;
+
+    for (let index = 0; index < queue.length; index += 1) {
+      const current = queue[index];
+      let invoiceData = current.invoiceData;
+
+      patchItem(current.id, {
+        status: processingStatus,
+        error: ''
+      });
+      setStatusText(`${progressPrefix} ${index + 1}/${queue.length}: ${current.file.name}`);
+
+      try {
+        if (!invoiceData) {
+          invoiceData = await extractInvoiceFromPdf(current.file);
+        }
+
+        successTotal += 1;
+        parsedResults.push({
+          ...current,
+          invoiceData
+        });
+        patchItem(current.id, {
+          status: current.renamedName && successStatus === 'analyzed' ? 'renamed' : successStatus,
+          invoiceData,
+          error: ''
+        });
+      } catch (parseError) {
+        failureTotal += 1;
+        patchItem(current.id, {
+          status: 'error',
+          invoiceData: invoiceData || null,
+          error: parseError.message || '解析失败'
+        });
+      }
+
+      await sleepToYield();
+    }
+
+    return {
+      parsedResults,
+      successTotal,
+      failureTotal
+    };
+  };
+
+  const handleAnalyzeAmounts = async () => {
+    if (!items.length) {
+      setError('请先上传至少一个 PDF 发票文件。');
+      return;
+    }
+
+    setIsAnalyzing(true);
+    setError('');
+    setStatusText(`开始识别金额，共 ${items.length} 个文件。`);
+    setItems((prev) => prev.map((item) => ({
+      ...item,
+      status: 'pending',
+      error: ''
+    })));
+
+    const queue = items.map((item) => ({
+      id: item.id,
+      file: item.file,
+      invoiceData: item.invoiceData,
+      renamedName: item.renamedName
+    }));
+
+    try {
+      const { successTotal, failureTotal } = await parseInvoices(queue, '正在识别金额', {
+        processingStatus: 'analyzing',
+        successStatus: 'analyzed'
+      });
+
+      if (successTotal === 0) {
+        setError('没有识别到可汇总的发票金额，请检查失败原因后重试。');
+        setStatusText('');
+        return;
+      }
+
+      setStatusText(
+        failureTotal > 0
+          ? `金额识别完成：成功 ${successTotal} 张，失败 ${failureTotal} 张。`
+          : `金额识别完成：共识别 ${successTotal} 张发票。`
+      );
+      toast.success(`金额识别完成，已更新 ${successTotal} 张发票的汇总结果。`);
+    } catch (runtimeError) {
+      setError(runtimeError.message || '金额识别失败，请稍后重试。');
+      setStatusText('');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   const handleRename = async () => {
     if (!items.length) {
@@ -220,7 +381,8 @@ function InvoiceRenamePage() {
     const queue = items.map((item) => ({
       id: item.id,
       file: item.file,
-      invoiceData: item.invoiceData
+      invoiceData: item.invoiceData,
+      renamedName: ''
     }));
     const zip = new JSZip();
     const usedNames = new Set();
@@ -228,25 +390,22 @@ function InvoiceRenamePage() {
     let failureTotal = 0;
 
     try {
-      setStatusText('正在加载 PDF 解析引擎...');
-      const { extractInvoiceFromPdf } = await import('../lib/invoicePdfParser');
+      const { parsedResults, failureTotal: parseFailureTotal } = await parseInvoices(queue, '正在解析发票', {
+        processingStatus: 'analyzing',
+        successStatus: 'analyzed'
+      });
+      failureTotal = parseFailureTotal;
 
-      for (let index = 0; index < queue.length; index += 1) {
-        const current = queue[index];
-        let invoiceData = current.invoiceData;
-
+      for (let index = 0; index < parsedResults.length; index += 1) {
+        const current = parsedResults[index];
         patchItem(current.id, {
-          status: 'processing',
+          status: 'renaming',
           renamedName: '',
           error: ''
         });
-        setStatusText(`正在解析 ${index + 1}/${queue.length}: ${current.file.name}`);
+        setStatusText(`正在生成文件名 ${index + 1}/${parsedResults.length}: ${current.file.name}`);
 
-          try {
-          if (!invoiceData) {
-            invoiceData = await extractInvoiceFromPdf(current.file);
-          }
-
+        try {
           const profileToUse = activeProfile || {
             invoiceTypeKey: DEFAULT_INVOICE_TYPE,
             separator,
@@ -256,16 +415,16 @@ function InvoiceRenamePage() {
           };
 
           const renamedName = ensureUniqueFileName(
-            buildRenamedFileName(current.file.name, invoiceData, profileToUse, index + 1),
+            buildRenamedFileName(current.file.name, current.invoiceData, profileToUse, index + 1),
             usedNames
           );
 
           zip.file(renamedName, current.file);
           successTotal += 1;
           patchItem(current.id, {
-            status: 'success',
+            status: 'renamed',
             renamedName,
-            invoiceData,
+            invoiceData: current.invoiceData,
             error: ''
           });
         } catch (renameError) {
@@ -273,7 +432,7 @@ function InvoiceRenamePage() {
           patchItem(current.id, {
             status: 'error',
             renamedName: '',
-            invoiceData: invoiceData || null,
+            invoiceData: current.invoiceData || null,
             error: renameError.message || '解析失败'
           });
         }
@@ -334,21 +493,22 @@ function InvoiceRenamePage() {
 
   return (
     <ToolPageShell
-      title="PDF 电子发票批量重命名"
-      desc="本地完成 PDF 发票解析、批量重命名和 ZIP 打包下载，不上传服务器。"
+      title="PDF电子发票 批量重命名 与 金额汇总"
+      desc="本地完成 PDF 发票解析、金额汇总、批量重命名和 ZIP 打包下载。"
     >
       <div className="invoice-tool">
         <section className="invoice-hero">
           <div>
             <span className="invoice-badge">本地处理</span>
-            <h2>批量上传 PDF 发票，按字段一键重命名</h2>
+            <h2>批量上传 PDF 发票，一键汇总金额并重命名</h2>
             <p>
-              支持按开票日期、开票金额、发票号码、销售方名称自由组合命名规则，
-              生成后的文件会在浏览器内直接打包下载。
+              支持先整理每张发票的发票金额、发票税额、价税合计，再按开票日期、
+              金额、发票号码、销售方名称等字段自由组合命名并打包下载。
             </p>
             <ul className="invoice-points">
               <li>发票文件仅在本地。</li>
               <li>适合标准可提取文本的 PDF 电子发票，扫描件和加密 PDF 可能无法识别。</li>
+              <li>支持批量汇总多张发票的发票金额、税额和价税合计。</li>
             </ul>
           </div>
           <div className="invoice-summary-grid">
@@ -361,11 +521,11 @@ function InvoiceRenamePage() {
               <strong>{prettyBytes(totalSize)}</strong>
             </div>
             <div className="invoice-summary-card">
-              <span>成功重命名</span>
-              <strong>{successCount}</strong>
+              <span>已识别文件</span>
+              <strong>{recognizedFileCount}</strong>
             </div>
             <div className="invoice-summary-card">
-              <span>识别失败</span>
+              <span>处理失败</span>
               <strong>{itemErrorCount}</strong>
             </div>
           </div>
@@ -374,7 +534,7 @@ function InvoiceRenamePage() {
         <section className="invoice-steps" aria-label="处理步骤">
           <StepItem index="1" label="上传 PDF 发票" active={activeStep === 1} done={activeStep > 1} />
           <StepItem index="2" label="设置命名方式" active={activeStep === 2} done={activeStep > 2} />
-          <StepItem index="3" label="下载重命名发票" active={activeStep === 3} done={Boolean(downloadUrl)} />
+          <StepItem index="3" label="识别金额并下载结果" active={activeStep === 3} done={Boolean(downloadUrl)} />
         </section>
 
         <div className="invoice-grid">
@@ -388,7 +548,7 @@ function InvoiceRenamePage() {
                 <button
                   className="invoice-btn invoice-btn-secondary"
                   type="button"
-                  disabled={isRenaming}
+                  disabled={isBusy}
                   onClick={() => inputRef.current?.click()}
                 >
                   添加文件
@@ -396,7 +556,7 @@ function InvoiceRenamePage() {
                 <button
                   className="invoice-btn invoice-btn-ghost"
                   type="button"
-                  disabled={isRenaming || !items.length}
+                  disabled={isBusy || !items.length}
                   onClick={handleClear}
                 >
                   清空列表
@@ -419,17 +579,17 @@ function InvoiceRenamePage() {
             <button
               className={isDragging ? 'invoice-dropzone is-dragging' : 'invoice-dropzone'}
               type="button"
-              disabled={isRenaming}
+              disabled={isBusy}
               onClick={() => inputRef.current?.click()}
               onDragEnter={(event) => {
                 event.preventDefault();
-                if (!isRenaming) {
+                if (!isBusy) {
                   setIsDragging(true);
                 }
               }}
               onDragOver={(event) => {
                 event.preventDefault();
-                if (!isRenaming) {
+                if (!isBusy) {
                   setIsDragging(true);
                 }
               }}
@@ -462,7 +622,7 @@ function InvoiceRenamePage() {
                 <button
                   className="invoice-btn invoice-btn-ghost"
                   type="button"
-                  disabled={isRenaming}
+                  disabled={isBusy}
                   onClick={() => {
                     setShowRuleSettings(true);
                   }}
@@ -477,52 +637,134 @@ function InvoiceRenamePage() {
               <strong>{previewName}</strong>
             </div>
           </section>
+          <section className="invoice-panel">
+            <div className="invoice-action-bar">
+              <div>
+                <h3>3. 识别金额或重命名</h3>
+                <p>可以先识别金额汇总，再按当前命名规则生成本地 ZIP 下载包。</p>
+              </div>
+              <div className="invoice-action-buttons">
+              <button
+                className="invoice-btn invoice-btn-ghost invoice-btn-identify"
+                type="button"
+                disabled={isBusy || !items.length}
+                onClick={handleAnalyzeAmounts}
+              >
+                  {isAnalyzing ? '识别中...' : `识别金额汇总（共 ${items.length} 张）`}
+                </button>
+                <button
+                  className="invoice-btn invoice-btn-primary"
+                  type="button"
+                  disabled={isBusy || !items.length}
+                  onClick={handleRename}
+                >
+                  {isRenaming ? '重命名中...' : `开始重命名（共 ${items.length} 张）`}
+                </button>
+                <button
+                  className="invoice-btn invoice-btn-secondary"
+                  type="button"
+                  disabled={isBusy || !downloadUrl}
+                  onClick={handleDownload}
+                >
+                  下载重命名发票
+                </button>
+              </div>
+            </div>
+
+            {statusText ? <p className="status-text">{statusText}</p> : null}
+            {error ? <p className="error">{error}</p> : null}
+          </section>
         </div>
 
         <section className="invoice-panel">
-          <div className="invoice-action-bar">
+          <div className="invoice-panel-head">
             <div>
-              <h3>3. 开始重命名</h3>
-              <p>点击后会在浏览器中逐个解析发票字段，并生成本地 ZIP 下载包。</p>
-            </div>
-            <div className="invoice-action-buttons">
-              <button
-                className="invoice-btn invoice-btn-primary"
-                type="button"
-                disabled={isRenaming || !items.length}
-                onClick={handleRename}
-              >
-                {isRenaming ? '处理中...' : `开始重命名（共 ${items.length} 张）`}
-              </button>
-              <button
-                className="invoice-btn invoice-btn-secondary"
-                type="button"
-                disabled={!downloadUrl}
-                onClick={handleDownload}
-              >
-                下载重命名发票
-              </button>
+              <h3>金额汇总</h3>
+              <p>逐张展示发票金额、发票税额和价税合计，并自动汇总当前已上传发票的金额。</p>
             </div>
           </div>
 
-          {statusText ? <p className="status-text">{statusText}</p> : null}
-          {error ? <p className="error">{error}</p> : null}
-
-          {downloadUrl ? (
-            <div className="invoice-result-card">
-              <div>
-                <span className="invoice-result-badge">完成</span>
-                <h4>重命名发票文件已准备好</h4>
-                <p>
-                  本次成功重命名 {downloadCount} 张发票
-                  {failedCount > 0 ? `，另有 ${failedCount} 张识别失败` : ''}。
-                </p>
+          {!items.length ? (
+            <div className="invoice-empty">还没有添加发票文件，先上传 PDF 后再识别金额汇总。</div>
+          ) : (
+            <>
+              <div className="invoice-amount-summary-grid">
+                <div className="invoice-amount-summary-card">
+                  <span>已识别发票</span>
+                  <strong>{amountSummary.recognizedCount}</strong>
+                </div>
+                <div className="invoice-amount-summary-card">
+                  <span>发票金额合计</span>
+                  <strong>{amountSummary.recognizedCount ? formatAmountNumber(amountSummary.invoiceAmountTotal) : '--'}</strong>
+                </div>
+                <div className="invoice-amount-summary-card">
+                  <span>发票税额合计</span>
+                  <strong>{amountSummary.recognizedCount ? formatAmountNumber(amountSummary.taxAmountTotal) : '--'}</strong>
+                </div>
+                <div className="invoice-amount-summary-card">
+                  <span>价税合计</span>
+                  <strong>{amountSummary.recognizedCount ? formatAmountNumber(amountSummary.totalAmountTotal) : '--'}</strong>
+                </div>
               </div>
-              <button className="invoice-btn invoice-btn-primary" type="button" onClick={handleDownload}>
-                下载 ZIP 文件
-              </button>
-            </div>
-          ) : null}
+
+              <div className="invoice-amount-table-wrap">
+                <table className="invoice-amount-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">发票文件</th>
+                      <th scope="col">发票号码</th>
+                      <th scope="col">发票金额</th>
+                      <th scope="col">发票税额</th>
+                      <th scope="col">价税合计</th>
+                      <th scope="col">状态</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {amountSummary.rows.map((row) => (
+                      <tr key={`amount-${row.id}`}>
+                        <td>
+                          <div className="invoice-amount-file">
+                            <strong title={row.fileName}>{row.fileName}</strong>
+                            <span>{row.issueDate || '待识别开票日期'}</span>
+                          </div>
+                        </td>
+                        <td>{row.invoiceNumber || '--'}</td>
+                        <td className="is-number">{formatAmountNumber(row.invoiceAmount)}</td>
+                        <td className="is-number">{formatAmountNumber(row.taxAmount)}</td>
+                        <td className="is-number">{formatAmountNumber(row.totalAmount)}</td>
+                        <td>
+                          {row.error ? (
+                            <span className="invoice-amount-status-text is-error">{row.error}</span>
+                          ) : (
+                            <span
+                              className={
+                                row.status === 'renamed'
+                                  ? 'invoice-amount-status-text is-success'
+                                  : row.status === 'analyzed'
+                                    ? 'invoice-amount-status-text is-identified'
+                                    : 'invoice-amount-status-text'
+                              }
+                            >
+                              {row.hasAnyAmount ? STATUS_LABEL_MAP[row.status] || '已识别' : '待识别'}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colSpan="2">合计</td>
+                      <td className="is-number">{amountSummary.recognizedCount ? formatAmountNumber(amountSummary.invoiceAmountTotal) : '--'}</td>
+                      <td className="is-number">{amountSummary.recognizedCount ? formatAmountNumber(amountSummary.taxAmountTotal) : '--'}</td>
+                      <td className="is-number">{amountSummary.recognizedCount ? formatAmountNumber(amountSummary.totalAmountTotal) : '--'}</td>
+                      <td>{amountSummary.recognizedCount ? `${amountSummary.recognizedCount} 张` : '--'}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </>
+          )}
         </section>
 
         <section className="invoice-panel">
@@ -534,23 +776,25 @@ function InvoiceRenamePage() {
           </div>
 
           {!items.length ? (
-            <div className="invoice-empty">还没有添加发票文件，先上传 PDF 后再开始重命名。</div>
+            <div className="invoice-empty">还没有添加发票文件，先上传 PDF 后再开始处理。</div>
           ) : (
             <div className="invoice-file-list">
               {items.map((item, index) => {
                 const extractedFields = formatExtractedFieldList(item.invoiceData);
                 const statusClass = item.status === 'error'
                   ? 'invoice-status-badge is-error'
-                  : item.status === 'success'
+                  : item.status === 'renamed'
                     ? 'invoice-status-badge is-success'
-                    : item.status === 'processing'
+                    : item.status === 'analyzed'
+                      ? 'invoice-status-badge is-identified'
+                      : item.status === 'analyzing' || item.status === 'renaming'
                       ? 'invoice-status-badge is-processing'
                       : 'invoice-status-badge';
 
                 return (
                   <article className="invoice-file-card" key={item.id}>
                     <div className="invoice-file-card-head">
-                      <div>
+                      <div className="invoice-file-card-head-left">
                         <span className="invoice-file-index">#{index + 1}</span>
                         <h4 title={item.file.name}>{item.file.name}</h4>
                       </div>
@@ -559,7 +803,7 @@ function InvoiceRenamePage() {
                         <button
                           className="invoice-mini-btn is-danger"
                           type="button"
-                          disabled={isRenaming}
+                          disabled={isBusy}
                           onClick={() => handleRemove(item.id)}
                         >
                           删除
@@ -581,7 +825,7 @@ function InvoiceRenamePage() {
                         ))}
                       </div>
                     ) : (
-                      <p className="invoice-muted">尚未解析字段，点击“开始重命名”后生成。</p>
+                      <p className="invoice-muted">尚未解析字段，可先点击“识别金额汇总”或直接开始重命名。</p>
                     )}
 
                     {item.renamedName ? (
