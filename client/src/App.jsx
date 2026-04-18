@@ -1,3 +1,4 @@
+import { Suspense, lazy } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import SiteLayout from './components/SiteLayout';
 import HomePage from './pages/HomePage';
@@ -23,7 +24,26 @@ import UrlCodecPage from './pages/UrlCodecPage';
 import EmojiListPage from './pages/EmojiListPage';
 import EmojiTopicsPage from './pages/EmojiTopicsPage';
 import EmojiTopicDetailPage from './pages/EmojiTopicDetailPage';
+import WechatCoverPage from './pages/WechatCoverPage';
 import NotFoundPage from './pages/NotFoundPage';
+import ChangelogPage from './pages/ChangelogPage';
+
+const InvoiceRenamePage = lazy(() => import('./pages/InvoiceRenamePage'));
+const InvoiceDedupPage = lazy(() => import('./pages/InvoiceDedupPage'));
+
+function LazyPage({ children }) {
+  return (
+    <Suspense
+      fallback={(
+        <main className="tool-page">
+          <section className="tool-card">页面加载中...</section>
+        </main>
+      )}
+    >
+      {children}
+    </Suspense>
+  );
+}
 
 function App() {
   return (
@@ -38,6 +58,10 @@ function App() {
           <Route path="unlock-pdf" element={<Navigate to="/tools/unlock-pdf" replace />} />
           <Route path="pdf-unlock" element={<Navigate to="/tools/unlock-pdf" replace />} />
           <Route path="PDF解密" element={<Navigate to="/tools/unlock-pdf" replace />} />
+          <Route path="invoice-pdf-rename" element={<Navigate to="/tools/invoice-pdf-rename" replace />} />
+          <Route path="电子发票批量重命名" element={<Navigate to="/tools/invoice-pdf-rename" replace />} />
+          <Route path="invoice-pdf-dedup" element={<Navigate to="/tools/invoice-pdf-dedup" replace />} />
+          <Route path="电子发票批量去重" element={<Navigate to="/tools/invoice-pdf-dedup" replace />} />
           <Route path="svg-base64" element={<Navigate to="/tools/svg-base64" replace />} />
           <Route path="SVG转Base64" element={<Navigate to="/tools/svg-base64" replace />} />
           <Route path="svg-path" element={<Navigate to="/tools/svg-path" replace />} />
@@ -59,11 +83,29 @@ function App() {
           <Route path="tools/text-letter" element={<TextLetterPage />} />
           <Route path="tools/txt-diff" element={<TextDiffPage />} />
           <Route path="tools/unlock-pdf" element={<UnlockPdfPage />} />
+          <Route
+            path="tools/invoice-pdf-rename"
+            element={(
+              <LazyPage>
+                <InvoiceRenamePage />
+              </LazyPage>
+            )}
+          />
+          <Route
+            path="tools/invoice-pdf-dedup"
+            element={(
+              <LazyPage>
+                <InvoiceDedupPage />
+              </LazyPage>
+            )}
+          />
           <Route path="tools/image-convert" element={<ImageConvertPage />} />
+          <Route path="tools/changelog" element={<ChangelogPage />} />
           <Route path="tools/svg-base64" element={<SvgBase64Page />} />
           <Route path="tools/svg-path" element={<SvgPathPage />} />
           <Route path="tools/svg-preview" element={<SvgPreviewPage />} />
           <Route path="tools/webshot" element={<WebshotPage />} />
+          <Route path="tools/getgzhtoutu" element={<WechatCoverPage />} />
           <Route path="tools/video-to-gif" element={<VideoToGifPage />} />
           <Route path="tools/video-to-gif-single" element={<VideoToGifSinglePage />} />
           <Route path="tools/torrent-magnet" element={<TorrentMagnetPage />} />

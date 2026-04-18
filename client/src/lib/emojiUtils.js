@@ -11,23 +11,6 @@ export function formatEmojiNumber(value) {
   return Number(value || 0).toLocaleString('zh-CN');
 }
 
-export async function copyEmojiText(text) {
-  if (navigator.clipboard && window.isSecureContext) {
-    await navigator.clipboard.writeText(text);
-    return;
-  }
-
-  const textarea = document.createElement('textarea');
-  textarea.value = text;
-  textarea.setAttribute('readonly', 'readonly');
-  textarea.style.position = 'fixed';
-  textarea.style.top = '-9999px';
-  document.body.appendChild(textarea);
-  textarea.select();
-  document.execCommand('copy');
-  textarea.remove();
-}
-
 export async function loadEmojiDataset() {
   const module = await import('../data/emojiData.json');
   return module.default || module;

@@ -4,6 +4,7 @@ export const categories = [
     { key: 'video', label: '视频处理' },
     { key: 'text', label: '文本处理' },
     { key: 'wps', label: 'WPS' },
+    { key: 'invoice', label: '发票工具' },
     { key: 'encode', label: '编码转换' },
     { key: 'emoji', label: 'Emoji 表情' },
     { key: 'dev', label: '开发工具' },
@@ -40,7 +41,7 @@ export const tools = [
     },
     {
         id: 'torrent-magnet',
-        name: 'Torrent 转磁力链接',
+        name: '种子转磁力链接',
         desc: '批量解析 .torrent 文件，生成磁力链接。',
         category: 'encode',
         path: '/tools/torrent-magnet'
@@ -81,11 +82,32 @@ export const tools = [
         path: '/tools/unlock-pdf'
     },
     {
+        id: 'invoice-pdf-rename',
+        name: 'PDF 电子发票批量重命名',
+        desc: '本地批量解析 PDF 电子发票，支持金额汇总、重命名并打包下载。',
+        category: 'invoice',
+        path: '/tools/invoice-pdf-rename'
+    },
+    {
+        id: 'invoice-pdf-dedup',
+        name: 'PDF 电子发票批量去重',
+        desc: '本地批量识别电子发票并统计重复，支持下载去重后的发票压缩包。',
+        category: 'invoice',
+        path: '/tools/invoice-pdf-dedup'
+    },
+    {
         id: 'image-convert',
         name: '在线图片转换',
         desc: '支持 WebP/PNG/JPG 批量转换与尺寸限制。',
         category: 'image',
         path: '/tools/image-convert'
+    },
+    {
+        id: 'getgzhtoutu',
+        name: '微信公众号封面获取',
+        desc: '输入公众号文章链接，提取封面并预览。',
+        category: 'image',
+        path: '/tools/getgzhtoutu'
     },
     {
         id: 'svg-base64',
@@ -153,6 +175,8 @@ export const tools = [
 ];
 
 export const featuredToolIds = [
+    'invoice-pdf-rename',
+    'getgzhtoutu',
     'torrent-magnet',
     'text-letter',
     'unlock-pdf',

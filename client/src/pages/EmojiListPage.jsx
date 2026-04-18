@@ -3,12 +3,12 @@ import { Link } from 'react-router-dom';
 import ToolPageShell from '../components/ToolPageShell';
 import { useToast } from '../components/ToastProvider';
 import {
-  copyEmojiText,
   createEmojiItems,
   formatEmojiNumber,
   loadEmojiDataset,
   normalizeEmojiText
 } from '../lib/emojiUtils';
+import { copyText } from '../lib/tool';
 
 const PREVIEW_SECTION_ITEMS = 72;
 const FOCUSED_SECTION_ITEMS = 180;
@@ -311,11 +311,11 @@ function EmojiListPage() {
       message = `已复制编码 ${item.code}`;
     }
 
-    try {
-      await copyEmojiText(text);
-      toast.success(message);
-    } catch (error) {
-      toast.error('复制失败，请手动复制。');
+    const ok = await copyText(text);
+    if (ok) {
+        toast.success(message);
+    } else {
+        toast.error('复制失败，请手动复制。');
     }
   }, [toast]);
 
