@@ -1,5 +1,7 @@
 (function () {
   const MEDIA_SOURCE = 'boxtools-video-download-extension';
+  const TOOL_BRIDGE_SOURCE = 'boxtools-video-download-page';
+  const TOOL_BRIDGE_RESPONSE_SOURCE = 'boxtools-video-download-extension-bridge';
   const MEDIA_PATTERN = /https?:\/\/[^\s"'<>\\]+?\.(?:m3u8|m3u|mp4|webm|mov|m4v|m4s|mkv|avi|flv|ts|3gp)(?:\?[^\s"'<>\\]*)?/ig;
   const RELATIVE_MEDIA_PATTERN = /(?:\/|\.\.\/|\.\/)[^\s"'<>\\]+?\.(?:m3u8|m3u|mp4|webm|mov|m4v|m4s|mkv|avi|flv|ts|3gp)(?:\?[^\s"'<>\\]*)?/ig;
 
@@ -139,6 +141,45 @@
     }
   }
 
+  function respondToToolBridge(requestId, body) {
+    if (!requestId) {
+      return;
+    }
+
+    window.postMessage(
+      {
+        source: TOOL_BRIDGE_RESPONSE_SOURCE,
+        requestId,
+        ...body
+      },
+      location.origin
+    );
+  }
+
+  function relayRuntimeMessage(message, requestId) {
+    try {
+      chrome.runtime.sendMessage(message, (response) => {
+        if (chrome.runtime.lastError) {
+          respondToToolBridge(requestId, {
+            ok: false,
+            error: chrome.runtime.lastError.message || '插件通信失败。'
+          });
+          return;
+        }
+
+        respondToToolBridge(requestId, response || {
+          ok: false,
+          error: '插件未返回结果。'
+        });
+      });
+    } catch (error) {
+      respondToToolBridge(requestId, {
+        ok: false,
+        error: error?.message || '插件通信失败。'
+      });
+    }
+  }
+
   async function collectAndSend() {
     await sendEntries(collectPageEntries());
   }
@@ -146,6 +187,35 @@
   window.addEventListener('message', (event) => {
     const data = event.data;
     if (event.source !== window || !data || data.source !== MEDIA_SOURCE || data.name !== 'captureEntries') {
+      if (event.source !== window || !data || data.source !== TOOL_BRIDGE_SOURCE) {
+        return;
+      }
+
+      const requestId = data.requestId;
+
+      if (data.name === 'detect-extension') {
+        respondToToolBridge(requestId, { ok: true });
+        return;
+      }
+
+      if (data.name === 'get-latest-capture') {
+        relayRuntimeMessage({ type: 'get-latest-capture' }, requestId);
+        return;
+      }
+
+      if (data.name === 'rescan-latest-capture') {
+        relayRuntimeMessage({ type: 'rescan-latest-capture' }, requestId);
+        return;
+      }
+
+      if (data.name === 'download-entry-for-tab') {
+        relayRuntimeMessage({
+          type: 'download-entry-for-tab',
+          tabId: data.payload?.tabId,
+          entry: data.payload?.entry
+        }, requestId);
+      }
+
       return;
     }
 

@@ -3,6 +3,7 @@ import ToolPageShell from '../components/ToolPageShell';
 import {
   analyzeVideoUrl,
   downloadTextFile,
+  getSourcePageDownloadSnippet,
   getSuggestedFilename,
   getVideoCaptureSnippet,
   parseCapturedPayload
@@ -13,6 +14,7 @@ import {
   saveMergedVideo,
   terminateFFmpeg
 } from '../lib/videoDownload/hlsDownloader';
+import { requestVideoDownloadExtension } from '../lib/videoDownload/extensionBridge';
 
 const CAPTURE_SNIPPET = getVideoCaptureSnippet();
 const EXTENSION_IMPORT_STORAGE_KEY = 'boxtoolsVideoDownloadImport';
@@ -88,6 +90,10 @@ function getEntryKindLabel(kind) {
   return '待确认';
 }
 
+function isExtensionMissingError(error) {
+  return /未检测到视频下载插件|插件通信失败|当前环境不支持插件通信/i.test(String(error?.message || error || ''));
+}
+
 async function copyText(text) {
   if (!text) {
     return false;
@@ -146,6 +152,8 @@ function VideoDownloadPage() {
   const [analysis, setAnalysis] = useState(null);
   const [previewUrl, setPreviewUrl] = useState('');
   const [loading, setLoading] = useState(false);
+  const [extensionBusy, setExtensionBusy] = useState(false);
+  const [extensionReady, setExtensionReady] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [mergeState, setMergeState] = useState({
@@ -159,6 +167,26 @@ function VideoDownloadPage() {
   useEffect(() => {
     return () => {
       terminateFFmpeg();
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    requestVideoDownloadExtension('detect-extension', {}, 700)
+      .then(() => {
+        if (!cancelled) {
+          setExtensionReady(true);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setExtensionReady(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
     };
   }, []);
 
@@ -184,6 +212,9 @@ function VideoDownloadPage() {
       const nextAnalysis = parseCapturedPayload(nextText);
       setCapturedText(nextText);
       setAnalysis(nextAnalysis);
+      if (nextAnalysis.source === 'browser-extension') {
+        setExtensionReady(true);
+      }
       setPreviewUrl(nextAnalysis.entries.find((entry) => entry.kind === 'file')?.url || '');
       setMessage(
         nextAnalysis.entries.length
@@ -275,6 +306,66 @@ function VideoDownloadPage() {
   const handleCopy = async (text, successMessage) => {
     const ok = await copyText(text);
     setMessage(ok ? successMessage : '复制失败，请手动复制。');
+  };
+
+  const handleImportLatestExtensionCapture = async (shouldRescan = false) => {
+    setExtensionBusy(true);
+    setError('');
+    setMessage(shouldRescan ? '正在让插件重扫最近视频页...' : '正在读取插件最近捕获结果...');
+
+    try {
+      const response = await requestVideoDownloadExtension(
+        shouldRescan ? 'rescan-latest-capture' : 'get-latest-capture',
+        {},
+        shouldRescan ? 3000 : 1500
+      );
+      setExtensionReady(true);
+      applyImportedAnalysis(
+        response.payload,
+        shouldRescan
+          ? '插件已重扫最近视频页，并导入最新结果。'
+          : '已从插件导入最近捕获结果。'
+      );
+    } catch (runtimeError) {
+      if (isExtensionMissingError(runtimeError)) {
+        setExtensionReady(false);
+      }
+      setMessage('');
+      setError(runtimeError.message || '插件导入失败。');
+    } finally {
+      setExtensionBusy(false);
+    }
+  };
+
+  const handleExtensionDownload = async (entry) => {
+    if (!analysis?.sourceTabId || !entry?.url) {
+      return;
+    }
+
+    setError('');
+    setMessage('正在请求插件回到来源页触发下载...');
+
+    try {
+      const response = await requestVideoDownloadExtension(
+        'download-entry-for-tab',
+        {
+          tabId: analysis.sourceTabId,
+          entry
+        },
+        4000
+      );
+      setExtensionReady(true);
+      setMessage(
+        response.mode === 'source-page'
+          ? '插件已在来源页上下文里触发下载，防盗链页面成功率会更高。'
+          : '来源页触发失败，插件已回退到浏览器下载。'
+      );
+    } catch (runtimeError) {
+      if (isExtensionMissingError(runtimeError)) {
+        setExtensionReady(false);
+      }
+      setError(runtimeError.message || '插件下载失败。');
+    }
   };
 
   const handleDirectDownload = async (entry) => {
@@ -558,6 +649,25 @@ function VideoDownloadPage() {
             <p>Bilibili 会优先导出 DASH 音视频地址，本页可继续在浏览器里本地封装为 MP4。</p>
             <p>微信公众号这类页面通常依赖页面内真实播放请求，插件模式比纯网页分析更稳。</p>
             <p>插件下载会优先尝试沿用来源页上下文触发，防盗链页面成功率会比普通直下更高。</p>
+            <p>{extensionReady ? '已检测到本地插件，可直接从这里导入最近捕获结果。' : '如果已加载本地插件，可以直接从这里导入最近捕获结果，无需手动复制 JSON。'}</p>
+          </div>
+
+          <div className="actions">
+            <button
+              type="button"
+              onClick={() => handleImportLatestExtensionCapture(false)}
+              disabled={extensionBusy}
+            >
+              {extensionBusy ? '处理中...' : '导入插件最近结果'}
+            </button>
+            <button
+              type="button"
+              className="btn-ghost"
+              onClick={() => handleImportLatestExtensionCapture(true)}
+              disabled={extensionBusy}
+            >
+              {extensionBusy ? '处理中...' : '让插件重扫并导入'}
+            </button>
           </div>
         </section>
       </div>
@@ -728,6 +838,32 @@ function VideoDownloadPage() {
                         onClick={() => setPreviewUrl(entry.url)}
                       >
                         设为预览
+                      </button>
+                    ) : null}
+
+                    {entry.kind !== 'dash' && analysis.source === 'browser-extension' && analysis.sourceTabId ? (
+                      <button
+                        type="button"
+                        className="btn-ghost"
+                        onClick={() => handleExtensionDownload(entry)}
+                      >
+                        插件来源页下载
+                      </button>
+                    ) : null}
+
+                    {entry.kind !== 'dash' ? (
+                      <button
+                        type="button"
+                        className="btn-ghost"
+                        onClick={() => handleCopy(
+                          getSourcePageDownloadSnippet(
+                            entry.url,
+                            entry.downloadName || getSuggestedFilename(entry.url, 'video')
+                          ),
+                          '来源页下载脚本已复制。回到原页面 Console 运行即可。'
+                        )}
+                      >
+                        复制来源页下载脚本
                       </button>
                     ) : null}
 

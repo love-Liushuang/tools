@@ -44,6 +44,10 @@ function sanitizeFileBaseName(value) {
     .replace(/^-|-$/g, '') || 'video';
 }
 
+function isToolPageUrl(url = '') {
+  return TOOL_PAGE_URLS.some((toolUrl) => String(url || '').startsWith(toolUrl));
+}
+
 function getDefaultLabel(url) {
   try {
     const parsed = new URL(url);
@@ -98,7 +102,8 @@ function getTabState(tabId) {
       pageUrl: '',
       title: '',
       items: [],
-      updatedAt: 0
+      updatedAt: 0,
+      capturedAt: 0
     });
   }
 
@@ -110,7 +115,8 @@ function resetTabState(tabId, nextPageUrl = '', nextTitle = '') {
     pageUrl: nextPageUrl,
     title: nextTitle,
     items: [],
-    updatedAt: Date.now()
+    updatedAt: Date.now(),
+    capturedAt: 0
   });
 }
 
@@ -182,6 +188,9 @@ function mergeItems(tabId, items, pageMeta = {}) {
 
   state.items = Array.from(map.values());
   state.updatedAt = Date.now();
+  if (state.items.length) {
+    state.capturedAt = Date.now();
+  }
 }
 
 function buildCapturedPayload(tabId) {
@@ -189,6 +198,7 @@ function buildCapturedPayload(tabId) {
   return {
     version: 1,
     source: 'browser-extension',
+    sourceTabId: tabId,
     pageUrl: state.pageUrl || '',
     title: state.title || '',
     generatedAt: new Date().toISOString(),
@@ -245,6 +255,37 @@ async function getActiveTab() {
     currentWindow: true
   });
   return tab || null;
+}
+
+function getLatestCaptureTabState({ requireItems = true } = {}) {
+  let latest = null;
+
+  mediaByTab.forEach((state, tabId) => {
+    if (!Number.isInteger(tabId) || tabId < 0 || !state) {
+      return;
+    }
+
+    if (isToolPageUrl(state.pageUrl)) {
+      return;
+    }
+
+    if (!(state.capturedAt > 0)) {
+      return;
+    }
+
+    if (requireItems && !(state.items || []).length) {
+      return;
+    }
+
+    if (!latest || (state.capturedAt || 0) > (latest.state.capturedAt || 0)) {
+      latest = {
+        tabId,
+        state
+      };
+    }
+  });
+
+  return latest;
 }
 
 function getToolPagePriority(url = '') {
@@ -514,6 +555,26 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === 'get-latest-capture') {
+    Promise.resolve()
+      .then(() => {
+        const latest = getLatestCaptureTabState({ requireItems: true });
+        if (!latest) {
+          throw new Error('还没有捕获到最近的视频页结果，请先在目标页播放或让插件扫描一次。');
+        }
+
+        return {
+          ok: true,
+          payload: buildCapturedPayload(latest.tabId)
+        };
+      })
+      .then(sendResponse)
+      .catch((error) => {
+        sendResponse({ ok: false, error: error?.message || '读取最近捕获结果失败。' });
+      });
+    return true;
+  }
+
   if (message.type === 'clear-active-tab-capture') {
     getActiveTab()
       .then((tab) => {
@@ -544,6 +605,30 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       })
       .catch((error) => {
         sendResponse({ ok: false, error: error?.message || '触发重扫失败。' });
+      });
+    return true;
+  }
+
+  if (message.type === 'rescan-latest-capture') {
+    Promise.resolve()
+      .then(async () => {
+        const latest = getLatestCaptureTabState({ requireItems: false });
+        if (!latest) {
+          throw new Error('没有可重扫的最近视频页，请先打开目标页并让插件注入。');
+        }
+
+        await chrome.tabs.sendMessage(latest.tabId, {
+          type: 'rescan-page-media'
+        });
+
+        return {
+          ok: true,
+          payload: buildCapturedPayload(latest.tabId)
+        };
+      })
+      .then(sendResponse)
+      .catch((error) => {
+        sendResponse({ ok: false, error: error?.message || '重扫最近视频页失败。' });
       });
     return true;
   }
@@ -590,6 +675,58 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           });
         }
       })
+      .catch((error) => {
+        sendResponse({ ok: false, error: error?.message || '下载启动失败。' });
+      });
+    return true;
+  }
+
+  if (message.type === 'download-entry-for-tab') {
+    const entry = message.entry;
+    const tabId = Number(message.tabId);
+    if (!Number.isInteger(tabId) || tabId < 0) {
+      sendResponse({ ok: false, error: '来源页标签不存在或已失效。' });
+      return false;
+    }
+
+    if (!entry?.url) {
+      sendResponse({ ok: false, error: '下载地址缺失。' });
+      return false;
+    }
+
+    Promise.resolve()
+      .then(async () => {
+        try {
+          await triggerSourcePageDownload(tabId, entry);
+          return {
+            ok: true,
+            mode: 'source-page'
+          };
+        } catch (pageError) {
+          return await new Promise((resolve) => {
+            chrome.downloads.download({
+              url: entry.url,
+              filename: getSuggestedDownloadName(entry),
+              saveAs: true
+            }, (downloadId) => {
+              if (chrome.runtime.lastError) {
+                resolve({
+                  ok: false,
+                  error: chrome.runtime.lastError.message || pageError?.message || '下载启动失败。'
+                });
+                return;
+              }
+
+              resolve({
+                ok: true,
+                mode: 'browser-downloads',
+                downloadId
+              });
+            });
+          });
+        }
+      })
+      .then(sendResponse)
       .catch((error) => {
         sendResponse({ ok: false, error: error?.message || '下载启动失败。' });
       });

@@ -16,7 +16,7 @@ const PLAYLIST_EXTENSIONS = [
   '.m3u'
 ];
 
-const MEDIA_EXTENSION_PATTERN = '(?:m3u8|m3u|mp4|webm|mov|m4v|mkv|avi|flv|ts|3gp)';
+const MEDIA_EXTENSION_PATTERN = '(?:m3u8|m3u|mp4|webm|mov|m4v|m4s|mkv|avi|flv|ts|3gp)';
 const ABSOLUTE_MEDIA_URL_RE = new RegExp(
   `https?:\\\\/\\\\/[^\\s"'<>\\\\]+?\\.${MEDIA_EXTENSION_PATTERN}(?:\\?[^\\s"'<>\\\\]*)?`,
   'ig'
@@ -25,6 +25,25 @@ const RELATIVE_MEDIA_URL_RE = new RegExp(
   `(?:\\/|\\.\\.\\/|\\.\\/)[^\\s"'<>\\\\]+?\\.${MEDIA_EXTENSION_PATTERN}(?:\\?[^\\s"'<>\\\\]*)?`,
   'ig'
 );
+const MEDIA_URL_FIELD_RE = /(url|uri|src|source|play|stream|content|download|file|baseurl|base_url|backupurl|backup_url)$/i;
+const MEDIA_CONTEXT_FIELD_RE = /(video|audio|stream|play|source|media|dash|hls|content|download|file|baseurl|base_url)/i;
+const AUDIO_FIELD_RE = /audio/i;
+
+function uniqueUrls(urls) {
+  const result = [];
+  const seen = new Set();
+
+  urls.forEach((url) => {
+    if (!url || seen.has(url)) {
+      return;
+    }
+
+    seen.add(url);
+    result.push(url);
+  });
+
+  return result;
+}
 
 function normalizeUrl(value, baseUrl) {
   if (typeof value !== 'string' || !value.trim()) {
@@ -182,6 +201,92 @@ function pushEntry(entries, candidateUrl, baseUrl, patch = {}) {
   });
 }
 
+function extractUrlsFromValue(value, baseUrl, depth = 0) {
+  if (!value || depth > 2) {
+    return [];
+  }
+
+  if (typeof value === 'string') {
+    const url = normalizeUrl(value, baseUrl);
+    if (!url || classifyUrlKind(url) === 'unknown') {
+      return [];
+    }
+
+    return [url];
+  }
+
+  if (Array.isArray(value)) {
+    return uniqueUrls(
+      value.flatMap((item) => extractUrlsFromValue(item, baseUrl, depth + 1))
+    );
+  }
+
+  if (typeof value !== 'object') {
+    return [];
+  }
+
+  const urls = [];
+  Object.entries(value).forEach(([key, nestedValue]) => {
+    if (typeof nestedValue === 'string' && MEDIA_URL_FIELD_RE.test(key)) {
+      urls.push(...extractUrlsFromValue(nestedValue, baseUrl, depth + 1));
+      return;
+    }
+
+    if (Array.isArray(nestedValue) && MEDIA_CONTEXT_FIELD_RE.test(key)) {
+      urls.push(...extractUrlsFromValue(nestedValue, baseUrl, depth + 1));
+      return;
+    }
+
+    if (nestedValue && typeof nestedValue === 'object' && MEDIA_CONTEXT_FIELD_RE.test(key)) {
+      urls.push(...extractUrlsFromValue(nestedValue, baseUrl, depth + 1));
+    }
+  });
+
+  return uniqueUrls(urls);
+}
+
+function collectDashEntriesFromRecord(value, baseUrl, entries, sourceType = 'json') {
+  if (!value || typeof value !== 'object') {
+    return;
+  }
+
+  const videoUrls = [];
+  const audioUrls = [];
+
+  Object.entries(value).forEach(([key, nestedValue]) => {
+    const urls = extractUrlsFromValue(nestedValue, baseUrl);
+    if (!urls.length) {
+      return;
+    }
+
+    if (AUDIO_FIELD_RE.test(key)) {
+      audioUrls.push(...urls);
+      return;
+    }
+
+    if (MEDIA_CONTEXT_FIELD_RE.test(key)) {
+      videoUrls.push(...urls);
+    }
+  });
+
+  const dedupedVideos = uniqueUrls(videoUrls);
+  const dedupedAudios = uniqueUrls(audioUrls);
+  if (!dedupedVideos.length || !dedupedAudios.length) {
+    return;
+  }
+
+  dedupedVideos.slice(0, 6).forEach((videoUrl, index) => {
+    entries.push({
+      url: videoUrl,
+      audioUrl: dedupedAudios[0],
+      kind: 'dash',
+      label: `DASH 视频 ${index + 1}`,
+      sourceType,
+      note: '来自页面内 JSON 音视频信息'
+    });
+  });
+}
+
 function collectFromObject(value, baseUrl, entries, sourceType = 'json') {
   if (!value) {
     return;
@@ -207,15 +312,22 @@ function collectFromObject(value, baseUrl, entries, sourceType = 'json') {
     return;
   }
 
+  collectDashEntriesFromRecord(value, baseUrl, entries, sourceType);
+
   Object.entries(value).forEach(([key, nestedValue]) => {
     if (typeof nestedValue === 'string') {
       const loweredKey = key.toLowerCase();
       if (
         loweredKey.includes('video') ||
+        loweredKey.includes('audio') ||
         loweredKey.includes('stream') ||
         loweredKey.includes('play') ||
         loweredKey.includes('contenturl') ||
-        loweredKey.includes('download')
+        loweredKey.includes('download') ||
+        loweredKey.includes('url') ||
+        loweredKey.includes('src') ||
+        loweredKey.includes('baseurl') ||
+        loweredKey.includes('base_url')
       ) {
         const url = normalizeUrl(nestedValue, baseUrl);
         if (url && classifyUrlKind(url) !== 'unknown') {
@@ -594,6 +706,7 @@ function buildCapturedAnalysis(payload) {
     inputUrl: pageUrl,
     finalUrl: pageUrl,
     title: payload.title || '',
+    sourceTabId: Number.isInteger(payload.sourceTabId) ? payload.sourceTabId : null,
     entries,
     warnings,
     manifest: null,
@@ -768,11 +881,43 @@ export function getSuggestedFilename(url, fallback = 'video') {
   return `${baseName}${extension || '.mp4'}`;
 }
 
+function escapeJavaScriptString(value) {
+  return String(value || '')
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/\r/g, '\\r')
+    .replace(/\n/g, '\\n');
+}
+
+export function getSourcePageDownloadSnippet(url, filename = '') {
+  const safeUrl = escapeJavaScriptString(url);
+  const safeFilename = escapeJavaScriptString(filename);
+
+  return String.raw`(() => {
+  const downloadUrl = '${safeUrl}';
+  const filename = '${safeFilename}';
+  const link = document.createElement('a');
+  link.href = downloadUrl;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  if (filename) {
+    link.setAttribute('download', filename);
+  }
+  link.style.display = 'none';
+  (document.body || document.documentElement).appendChild(link);
+  link.click();
+  link.remove();
+})();`;
+}
+
 export function getVideoCaptureSnippet() {
   return String.raw`(() => {
-  const mediaPattern = /https?:\/\/[^\s"'<>\\]+?\.(?:m3u8|m3u|mp4|webm|mov|m4v|mkv|avi|flv|ts|3gp)(?:\?[^\s"'<>\\]*)?/ig;
-  const relativePattern = /(?:\/|\.\.\/|\.\/)[^\s"'<>\\]+?\.(?:m3u8|m3u|mp4|webm|mov|m4v|mkv|avi|flv|ts|3gp)(?:\?[^\s"'<>\\]*)?/ig;
+  const mediaPattern = /https?:\/\/[^\s"'<>\\]+?\.(?:m3u8|m3u|mp4|webm|mov|m4v|m4s|mkv|avi|flv|ts|3gp)(?:\?[^\s"'<>\\]*)?/ig;
+  const relativePattern = /(?:\/|\.\.\/|\.\/)[^\s"'<>\\]+?\.(?:m3u8|m3u|mp4|webm|mov|m4v|m4s|mkv|avi|flv|ts|3gp)(?:\?[^\s"'<>\\]*)?/ig;
+  const windowKeyPattern = /(video|audio|play|player|stream|media|dash|hls|source|state|data|info)/i;
+  const commonGlobalKeys = ['__NEXT_DATA__', '__NUXT__', '__INITIAL_STATE__', '__INITIAL_DATA__', '__playinfo__', '__PLAYER_CONFIG__', 'ytInitialPlayerResponse'];
   const seen = new Map();
+  const visited = new WeakSet();
   const toAbs = (value) => {
     if (!value || typeof value !== 'string') return '';
     try {
@@ -800,6 +945,81 @@ export function getVideoCaptureSnippet() {
       });
     }
   };
+  const pushDash = (videoUrl, audioUrl, source, note) => {
+    const url = toAbs(videoUrl);
+    const audio = toAbs(audioUrl);
+    if (!url || !audio) return;
+    const key = 'dash|' + url + '|' + audio;
+    if (!seen.has(key)) {
+      seen.set(key, {
+        url,
+        audioUrl: audio,
+        kind: 'dash',
+        source,
+        note
+      });
+    }
+  };
+  const collectTextMatches = (text, source, note) => {
+    if (!text || typeof text !== 'string') return;
+    mediaPattern.lastIndex = 0;
+    relativePattern.lastIndex = 0;
+    let match = mediaPattern.exec(text);
+    while (match) {
+      push(match[0], source, note);
+      match = mediaPattern.exec(text);
+    }
+    match = relativePattern.exec(text);
+    while (match) {
+      push(match[0], source, note);
+      match = relativePattern.exec(text);
+    }
+  };
+  const visitValue = (value, source, note, depth = 0) => {
+    if (!value || depth > 3) return;
+    if (typeof value === 'string') {
+      collectTextMatches(value, source, note);
+      return;
+    }
+    if (typeof value !== 'object') return;
+    if (visited.has(value)) return;
+    visited.add(value);
+    if (Array.isArray(value)) {
+      value.slice(0, 24).forEach((item) => visitValue(item, source, note, depth + 1));
+      return;
+    }
+    const videoUrls = [];
+    const audioUrls = [];
+    Object.entries(value).forEach(([key, nestedValue]) => {
+      const loweredKey = String(key || '').toLowerCase();
+      if (typeof nestedValue === 'string') {
+        const nextUrl = toAbs(nestedValue);
+        if (nextUrl && /(url|src|source|play|stream|content|download|file|baseurl|base_url)/i.test(loweredKey)) {
+          if (/audio/i.test(loweredKey)) {
+            audioUrls.push(nextUrl);
+          } else {
+            videoUrls.push(nextUrl);
+          }
+          push(nextUrl, source + ':' + key, note + ' (' + key + ')');
+          return;
+        }
+        collectTextMatches(nestedValue, source + ':' + key, note + ' (' + key + ')');
+        return;
+      }
+      if (nestedValue && typeof nestedValue === 'object' && /(video|audio|media|dash|hls|play|stream|source|data)/i.test(loweredKey)) {
+        visitValue(nestedValue, source + ':' + key, note + ' (' + key + ')', depth + 1);
+        return;
+      }
+      if (Array.isArray(nestedValue)) {
+        nestedValue.slice(0, 16).forEach((item) => visitValue(item, source + ':' + key, note + ' (' + key + ')', depth + 1));
+      }
+    });
+    if (videoUrls.length && audioUrls.length) {
+      videoUrls.slice(0, 4).forEach((videoUrl, index) => {
+        pushDash(videoUrl, audioUrls[0], source, note + ' (DASH ' + (index + 1) + ')');
+      });
+    }
+  };
   document.querySelectorAll('video').forEach((node) => {
     push(node.currentSrc || node.src, 'video tag', '来自页面 <video>');
     Array.from(node.querySelectorAll('source[src]')).forEach((sourceNode) => {
@@ -811,6 +1031,13 @@ export function getVideoCaptureSnippet() {
   });
   document.querySelectorAll('a[href]').forEach((node) => {
     push(node.href || node.getAttribute('href'), 'anchor tag', '来自页面链接');
+  });
+  document.querySelectorAll('[data-src],[data-url],[data-playurl],[data-video-url],[data-hls]').forEach((node) => {
+    Array.from(node.attributes || []).forEach((attr) => {
+      if (/^data-(?:src|url|playurl|video-url|hls)$/i.test(attr.name)) {
+        push(attr.value, 'data attribute', '来自页面 data-* 属性');
+      }
+    });
   });
   if (window.performance && performance.getEntriesByType) {
     performance.getEntriesByType('resource').forEach((entry) => {
@@ -835,17 +1062,23 @@ export function getVideoCaptureSnippet() {
   Array.from(document.scripts).forEach((node) => {
     const text = node.textContent || '';
     if (!text) return;
-    mediaPattern.lastIndex = 0;
-    relativePattern.lastIndex = 0;
-    let match = mediaPattern.exec(text);
-    while (match) {
-      push(match[0], 'script', '来自脚本文本');
-      match = mediaPattern.exec(text);
+    collectTextMatches(text, 'script', '来自脚本文本');
+  });
+  commonGlobalKeys.forEach((key) => {
+    try {
+      if (key in window) {
+        visitValue(window[key], 'global', '来自 window.' + key);
+      }
+    } catch (error) {
+      // ignore cross-origin getter errors
     }
-    match = relativePattern.exec(text);
-    while (match) {
-      push(match[0], 'script', '来自脚本文本');
-      match = relativePattern.exec(text);
+  });
+  Object.keys(window).filter((key) => windowKeyPattern.test(key)).slice(0, 20).forEach((key) => {
+    if (commonGlobalKeys.includes(key)) return;
+    try {
+      visitValue(window[key], 'window object', '来自 window.' + key);
+    } catch (error) {
+      // ignore access errors
     }
   });
   const payload = {
