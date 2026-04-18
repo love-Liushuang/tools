@@ -3,7 +3,6 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import SiteLayout from './components/SiteLayout';
 import HomePage from './pages/HomePage';
 import JsonFormatterPage from './pages/JsonFormatterPage';
-import Base64Page from './pages/Base64Page';
 import TextStatsPage from './pages/TextStatsPage';
 import TextLetterPage from './pages/TextLetterPage';
 import TextDiffPage from './pages/TextDiffPage';
@@ -20,6 +19,7 @@ import TorrentMagnetPage from './pages/TorrentMagnetPage';
 import MarkdownEditorPage from './pages/MarkdownEditorPage';
 import HotTrendsPage from './pages/HotTrendsPage';
 import Md5Page from './pages/Md5Page';
+import UrlCodecPage from './pages/UrlCodecPage';
 import EmojiListPage from './pages/EmojiListPage';
 import EmojiTopicsPage from './pages/EmojiTopicsPage';
 import EmojiTopicDetailPage from './pages/EmojiTopicDetailPage';
@@ -68,8 +68,15 @@ function App() {
           <Route path="svg-preview" element={<Navigate to="/tools/svg-preview" replace />} />
           <Route path="SVG预览" element={<Navigate to="/tools/svg-preview" replace />} />
           <Route path="SVG图片预览" element={<Navigate to="/tools/svg-preview" replace />} />
+          <Route path="urlencode" element={<Navigate to="/tools/url-codec" replace />} />
+          <Route path="urldecode" element={<Navigate to="/tools/url-codec" replace />} />
+          <Route path="URL编码" element={<Navigate to="/tools/url-codec" replace />} />
+          <Route path="URL解码" element={<Navigate to="/tools/url-codec" replace />} />
           <Route path="tools/json-formatter" element={<JsonFormatterPage />} />
-          <Route path="tools/base64" element={<Base64Page />} />
+          <Route path="tools/url-codec" element={<UrlCodecPage />} />
+          <Route path="tools/urlencode" element={<Navigate to="/tools/url-codec" replace />} />
+          <Route path="tools/urldecode" element={<Navigate to="/tools/url-codec" replace />} />
+          <Route path="tools/base64" element={<UrlCodecPage initialCodec="base64" />} />
           <Route path="tools/file-encrypt" element={<FileEncryptPage />} />
           <Route path="tools/text-stats" element={<TextStatsPage />} />
           <Route path="tools/text-letter" element={<TextLetterPage />} />

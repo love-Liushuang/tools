@@ -4,6 +4,14 @@ import { categories, featuredToolIds, tools } from '../data/tools';
 
 const FEATURED_DEFAULT_COUNT = 6;
 
+function getToolCategoryKeys(tool) {
+  const raw = tool?.category;
+  if (Array.isArray(raw)) {
+    return raw;
+  }
+  return raw ? [raw] : [];
+}
+
 function HomePage() {
   const [activeCategory, setActiveCategory] = useState('all');
   const [featuredExpanded, setFeaturedExpanded] = useState(false);
@@ -27,7 +35,7 @@ function HomePage() {
     if (activeCategory === 'all') {
       return tools;
     }
-    return tools.filter((tool) => tool.category === activeCategory);
+    return tools.filter((tool) => getToolCategoryKeys(tool).includes(activeCategory));
   }, [activeCategory]);
 
   return (

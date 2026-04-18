@@ -3,6 +3,14 @@ import React from 'react';
 function ChangelogPage () {
     const entries = [
         {
+            version: 'v1.12.4',
+            date: '2026-04-19',
+            items: [
+                '编码/解码工具升级：增加 URL 编码/解码 并与 Base64 编解码合并为统一入口，按编码类型切换使用。',
+                '工具分类整理：基于多分类能力重新梳理现有工具归类，增强文本、编码、开发、图片和文档场景下的查找效率。',
+            ],
+        },
+        {
             version: 'v1.12.3',
             date: '2026-04-18',
             items: [
