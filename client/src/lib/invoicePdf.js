@@ -90,6 +90,12 @@ export const INVOICE_FIELD_MAP = {
     kind: 'text',
     sample: '伍拾圆整'
   },
+  projectName: {
+    key: 'projectName',
+    label: '项目名称',
+    kind: 'text',
+    sample: '*信息技术服务*软件服务费'
+  },
   remarks: {
     key: 'remarks',
     label: '备注',
@@ -324,6 +330,14 @@ function formatDateValue(value, dateMode) {
 
 function getFieldMeta(fieldKey) {
   return INVOICE_FIELD_MAP[fieldKey] || { key: fieldKey, label: fieldKey, kind: 'text', sample: fieldKey };
+}
+
+export function getInvoiceFieldMeta(fieldKey) {
+  return getFieldMeta(fieldKey);
+}
+
+export function getInvoiceFieldLabel(fieldKey) {
+  return getFieldMeta(fieldKey).label;
 }
 
 function getInvoiceTypeNameValue(invoiceTypeKey, meta) {
@@ -599,6 +613,34 @@ export function formatExtractedFieldList(invoiceData, invoiceTypeKey) {
       };
     })
     .filter((field) => field.value);
+}
+
+export function formatInvoiceFieldValue(fieldKey, invoiceData, options = {}) {
+  if (!fieldKey) {
+    return '';
+  }
+
+  const meta = getFieldMeta(fieldKey);
+  const showFieldLabel = !!options.showFieldLabel;
+  const invoiceTypeKey = options.invoiceTypeKey || DEFAULT_INVOICE_TYPE;
+  const dateMode = options.dateMode || meta.defaultDateMode || 'year-month-day';
+  const rawValue = invoiceData?.[fieldKey] || '';
+
+  let value = '';
+
+  if (fieldKey === 'invoiceTypeName') {
+    value = cleanFieldValue(rawValue) || getInvoiceTypeNameValue(invoiceTypeKey, meta);
+  } else if (meta.kind === 'date' && rawValue) {
+    value = formatDateValue(rawValue, dateMode);
+  } else {
+    value = cleanFieldValue(rawValue);
+  }
+
+  if (!value) {
+    return '';
+  }
+
+  return showFieldLabel ? `${meta.label}${value}` : value;
 }
 
 export function getPreviewLength(invoiceTypeKey, profile) {

@@ -89,6 +89,13 @@ export const tools = [
         path: '/tools/invoice-pdf-dedup'
     },
     {
+        id: 'invoice-ledger-export',
+        name: 'PDF 电子发票台账导出',
+        desc: '本地批量识别电子发票并导出 Excel 台账，支持自选导出列。',
+        category: ['invoice', 'wps'],
+        path: '/tools/invoice-ledger-export'
+    },
+    {
         id: 'image-convert',
         name: '在线图片转换',
         desc: '支持 WebP/PNG/JPG 批量转换与尺寸限制。',

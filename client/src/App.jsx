@@ -29,6 +29,7 @@ import ChangelogPage from './pages/ChangelogPage';
 
 const InvoiceRenamePage = lazy(() => import('./pages/InvoiceRenamePage'));
 const InvoiceDedupPage = lazy(() => import('./pages/InvoiceDedupPage'));
+const InvoiceLedgerPage = lazy(() => import('./pages/InvoiceLedgerPage'));
 
 function LazyPage({ children }) {
   return (
@@ -61,6 +62,8 @@ function App() {
           <Route path="电子发票批量重命名" element={<Navigate to="/tools/invoice-pdf-rename" replace />} />
           <Route path="invoice-pdf-dedup" element={<Navigate to="/tools/invoice-pdf-dedup" replace />} />
           <Route path="电子发票批量去重" element={<Navigate to="/tools/invoice-pdf-dedup" replace />} />
+          <Route path="invoice-ledger-export" element={<Navigate to="/tools/invoice-ledger-export" replace />} />
+          <Route path="电子发票台账导出" element={<Navigate to="/tools/invoice-ledger-export" replace />} />
           <Route path="svg-base64" element={<Navigate to="/tools/svg-base64" replace />} />
           <Route path="SVG转Base64" element={<Navigate to="/tools/svg-base64" replace />} />
           <Route path="svg-path" element={<Navigate to="/tools/svg-path" replace />} />
@@ -95,6 +98,14 @@ function App() {
             element={(
               <LazyPage>
                 <InvoiceDedupPage />
+              </LazyPage>
+            )}
+          />
+          <Route
+            path="tools/invoice-ledger-export"
+            element={(
+              <LazyPage>
+                <InvoiceLedgerPage />
               </LazyPage>
             )}
           />

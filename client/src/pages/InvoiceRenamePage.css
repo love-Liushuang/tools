@@ -142,6 +142,7 @@
   border: 1px solid #dbe7f4;
   background: #fff;
   max-height: 80vh;
+  min-width: 0;
   display: flex;
   flex-direction: column;
 }
@@ -426,8 +427,11 @@
 }
 
 .invoice-amount-table-wrap {
+  width: 100%;
+  max-width: 100%;
   margin-top: 16px;
   overflow-x: auto;
+  overflow-y: hidden;
   border: 1px solid #dce7f4;
   border-radius: 14px;
 }
@@ -458,6 +462,29 @@
 .invoice-amount-table td {
   color: #173b5d;
   font-size: 14px;
+}
+
+.invoice-ledger-row.is-duplicate td {
+  background: #fff4f2;
+}
+
+.invoice-ledger-row.is-weak td {
+  background: #fff9ef;
+}
+
+.invoice-ledger-table {
+  width: max-content;
+  min-width: 100%;
+}
+
+.invoice-ledger-table th,
+.invoice-ledger-table td {
+  white-space: nowrap;
+  line-height: 1.45;
+}
+
+.invoice-ledger-table .invoice-ledger-col-wide {
+  min-width: 320px;
 }
 
 .invoice-amount-table tbody tr:last-child td,

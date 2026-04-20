@@ -8,6 +8,7 @@ const SELLER_SECTION_RE = /销售方(?:信息)?/;
 const NEXT_FIELD_RE = /(?:纳税人识别号|地址、电话|地址电话|开户地址及账号|开户行及账号|账号|电话|备注|项目名称|服务名称|密码区|收款人|复核|开票人|购买方|销售方)/;
 const DATE_VALUE_RE = /((?:19|20)\d{2}(?:年|[./-])\d{1,2}(?:月|[./-])\d{1,2}日?|\d{8})/;
 const NAME_FIELD_STOP_RE = /(?:纳税人识别号|地址、电话|地址电话|地址|电话|开户地址及账号|开户地址|开户行及账号|开户行|账号|备注|项目名称|服务名称|密码区|收款人|复核|开票人|购买方|销售方|名称[:：]?|$)/;
+const PARTY_NAME_NOISE_RE = /^(?:项目名称|规格型号|单位|数量|单价|金额|税额|税率|征收率|校验码|机器编号|收款人|复核|开票人|备注|购买方|销售方|购买方信息|销售方信息|电子发票|普通发票)$/;
 
 function normalizePdfText(text) {
   return String(text || '')
@@ -78,6 +79,25 @@ function cleanCompanyName(value) {
     .trim();
 }
 
+function cleanPartyName(value) {
+  return cleanFieldValue(value)
+    .replace(/^(购买方名称|销售方名称|购买方信息|销售方信息|名称)[:：]?/, '')
+    .replace(NEXT_FIELD_RE, '')
+    .replace(/[\\/:"*?<>|]/g, ' ')
+    .replace(/\s+/g, '')
+    .replace(/^[^\u4E00-\u9FA5A-Za-z0-9()（）·&-]+/, '')
+    .replace(/[^\u4E00-\u9FA5A-Za-z0-9()（）·&-]+$/, '')
+    .trim();
+}
+
+function isNoisePartyName(value) {
+  const text = cleanPartyName(value);
+  if (!text) {
+    return true;
+  }
+  return PARTY_NAME_NOISE_RE.test(text);
+}
+
 function looksLikeCompanyName(value) {
   if (!value || value.length < 4) {
     return false;
@@ -89,6 +109,55 @@ function looksLikeCompanyName(value) {
     return true;
   }
   return /^[\u4E00-\u9FA5A-Za-z0-9()（）·&-]{4,40}$/.test(value);
+}
+
+function looksLikePersonName(value) {
+  const text = cleanPartyName(value);
+  if (!text || isNoisePartyName(text)) {
+    return false;
+  }
+
+  if (/^[\u4E00-\u9FA5]{2,8}$/.test(text)) {
+    return true;
+  }
+
+  if (/^[A-Za-z][A-Za-z\s·]{1,30}$/.test(text)) {
+    return true;
+  }
+
+  return false;
+}
+
+function looksLikePartyName(value, options = {}) {
+  const text = cleanPartyName(value);
+  if (!text || isNoisePartyName(text)) {
+    return false;
+  }
+
+  if (looksLikeCompanyName(text)) {
+    return true;
+  }
+
+  if (options.allowPerson && looksLikePersonName(text)) {
+    return true;
+  }
+
+  return false;
+}
+
+function extractNamedFieldCandidates(text, options = {}) {
+  const normalized = compactText(text);
+  if (!normalized) {
+    return [];
+  }
+
+  const fieldLabel = options.fieldLabel || '名称';
+  const allowPerson = !!options.allowPerson;
+  const stopPattern = options.stopPattern || NAME_FIELD_STOP_RE.source;
+  const regex = new RegExp(`${fieldLabel}[:：]?(.+?)(?=${stopPattern})`, 'g');
+
+  return Array.from(normalized.matchAll(regex), (match) => cleanPartyName(match[1]))
+    .filter((value) => looksLikePartyName(value, { allowPerson }));
 }
 
 function extractNameCandidates(text) {
@@ -351,11 +420,11 @@ function parseStructuredPartyFields(lines) {
     const { leftCompact, rightCompact } = splitLineByColumns(line, splitX);
 
     if (!result.buyerName && /名称/.test(leftCompact)) {
-      result.buyerName = collectCompanyCandidatesInOrder(leftCompact)[0] || '';
+      result.buyerName = extractNamedFieldCandidates(leftCompact, { allowPerson: true })[0] || '';
     }
 
     if (!result.sellerName && /名称/.test(rightCompact)) {
-      const sellerCandidates = collectCompanyCandidatesInOrder(rightCompact);
+      const sellerCandidates = extractNamedFieldCandidates(rightCompact);
       result.sellerName = sellerCandidates[sellerCandidates.length - 1] || '';
     }
 
@@ -371,10 +440,10 @@ function parseStructuredPartyFields(lines) {
 
   if (!result.buyerName || !result.sellerName) {
     for (const line of lines) {
-      const names = Array.from(
-        line.compact.matchAll(/名称[:：]?(.+?)(?=(?:[购销买售]?名称[:：]?|统一社会信用代码|纳税人识别号|地址、电话|地址电话|开户地址及账号|开户地址|开户行及账号|开户行|账号|备注|收款人|复核|开票人|$))/g),
-        (match) => cleanCompanyName(match[1])
-      ).filter(looksLikeCompanyName);
+      const names = extractNamedFieldCandidates(line.compact, {
+        allowPerson: true,
+        stopPattern: '(?:[购销买售]?名称[:：]?|统一社会信用代码|纳税人识别号|地址、电话|地址电话|开户地址及账号|开户地址|开户行及账号|开户行|账号|备注|收款人|复核|开票人|$)'
+      });
 
       if (names.length >= 2) {
         result.buyerName = result.buyerName || names[0];
@@ -733,6 +802,11 @@ function parseBuyerName(lines, fullText, anchorIndex) {
       (_, offset) => lines[buyerSectionIndex + offset]?.compact || ''
     ).join('');
 
+    const explicitBuyerName = extractNamedFieldCandidates(buyerWindowText, { allowPerson: true })[0] || '';
+    if (explicitBuyerName) {
+      return explicitBuyerName;
+    }
+
     const candidate = pickBestCompanyCandidate([
       ...extractNameCandidates(buyerWindowText),
       ...extractCompanyPhrases(buyerWindowText)
@@ -747,6 +821,10 @@ function parseBuyerName(lines, fullText, anchorIndex) {
     const idx = normalizedFullText.indexOf(buyerTax);
     if (idx >= 0) {
       const pre = normalizedFullText.slice(Math.max(0, idx - 200), idx);
+      const explicitBuyerName = extractNamedFieldCandidates(pre, { allowPerson: true })[0] || '';
+      if (explicitBuyerName) {
+        return explicitBuyerName;
+      }
       const cand = pickBestCompanyCandidate([
         ...extractNameCandidates(pre),
         ...extractCompanyPhrases(pre)
@@ -881,6 +959,64 @@ function parseRemarks(lines, fullText) {
   }
 
   return '';
+}
+
+function parseProjectName(lines) {
+  const headerIndex = lines.findIndex((line) => /项目名称/.test(line.compact) && /规格型号|单位|数量|金额|税额/.test(line.compact));
+
+  if (headerIndex < 0) {
+    return '';
+  }
+
+  const headerLine = lines[headerIndex];
+  const projectRightLimit = (headerLine?.segments || [])
+    .filter((segment) => /规格型号|单位/.test(normalizePdfText(segment.text)))
+    .map((segment) => segment.x)
+    .sort((left, right) => left - right)[0];
+  const collected = [];
+
+  for (let index = headerIndex + 1; index < Math.min(lines.length, headerIndex + 10); index += 1) {
+    const line = lines[index];
+    const projectSegments = projectRightLimit
+      ? (line?.segments || []).filter((segment) => segment.x < projectRightLimit - 4)
+      : (line?.segments || []);
+    const text = cleanFieldValue(joinTextSegments(projectSegments));
+    const compact = compactText(text);
+
+    if (!compact) {
+      if (collected.length) {
+        break;
+      }
+      continue;
+    }
+
+    if (/^(合计|价税合计|备注|订单号|收款人|复核|开票人)/.test(compact)) {
+      break;
+    }
+
+    if (/项目名称|规格型号|单位|数量|单价|金额|税额|税率|征收率/.test(compact)) {
+      continue;
+    }
+
+    if (!/[\u4E00-\u9FA5A-Za-z]/.test(compact)) {
+      if (collected.length) {
+        break;
+      }
+      continue;
+    }
+
+    if (collected.includes(text)) {
+      break;
+    }
+
+    collected.push(text);
+
+    if (collected.length >= 2) {
+      break;
+    }
+  }
+
+  return collected.join(' ');
 }
 
 function parseIssuer(lines, fullText) {
@@ -1053,6 +1189,7 @@ export async function extractInvoiceFromPdf(file) {
       taxAmount: parsedTaxAmount,
       totalAmount: parsedTotalAmount,
       totalAmountUpper: parseTotalAmountUpper(lines, fullText),
+      projectName: parseProjectName(lines),
       remarks: parseRemarks(lines, fullText),
       payee: parsePayee(lines, fullText),
       reviewer: parseReviewer(lines, fullText),

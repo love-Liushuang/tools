@@ -39,6 +39,10 @@ export function createInvoiceQueueItems(fileList, createExtra) {
 }
 
 export function createInvoiceArchiveName(prefix = '发票处理文件') {
+  return createInvoiceTimestampedName(prefix, 'zip');
+}
+
+export function createInvoiceTimestampedName(prefix = '发票处理文件', extension = 'zip') {
   const now = new Date();
   const pad = (value) => String(value).padStart(2, '0');
   const stamp = [
@@ -50,7 +54,8 @@ export function createInvoiceArchiveName(prefix = '发票处理文件') {
     pad(now.getMinutes()),
     pad(now.getSeconds())
   ].join('');
-  return `${prefix}_${stamp}.zip`;
+  const ext = String(extension || '').replace(/^\.+/, '');
+  return `${prefix}_${stamp}${ext ? `.${ext}` : ''}`;
 }
 
 export async function parseInvoiceFileQueue(queue, options = {}) {
