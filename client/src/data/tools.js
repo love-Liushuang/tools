@@ -76,7 +76,7 @@ export const tools = [
     },
     {
         id: 'invoice-pdf-rename',
-        name: 'PDF 电子发票批量重命名',
+        name: 'PDF 电子发票批量重命名与金额汇总',
         desc: '本地批量解析 PDF 电子发票，支持金额汇总、重命名并打包下载。',
         category: ['invoice', 'wps'],
         path: '/tools/invoice-pdf-rename'
@@ -176,11 +176,8 @@ export const tools = [
 
 export const featuredToolIds = [
     'invoice-pdf-rename',
+    'invoice-pdf-dedup',
+    'invoice-ledger-export',
     'getgzhtoutu',
-    'torrent-magnet',
-    'text-letter',
-    'unlock-pdf',
-    'image-convert',
-    'file-encrypt',
     'webshot',
 ];
