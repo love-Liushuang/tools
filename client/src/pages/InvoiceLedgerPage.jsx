@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import ToolPageShell from '../components/ToolPageShell';
 import { useToast } from '../components/ToastProvider';
 import InvoiceLedgerFieldsModal from '../components/InvoiceLedgerFieldsModal';
-import { buildDedupResult } from '../lib/invoiceDedup';
+import { buildAmountMatchResult, buildDedupResult } from '../lib/invoiceDedup';
 import {
   buildInvoiceLedgerRows,
   createInvoiceLedgerBlob,
@@ -51,6 +51,7 @@ function InvoiceLedgerPage() {
   const [selectedFieldKeys, setSelectedFieldKeys] = useState(DEFAULT_LEDGER_FIELD_KEYS);
   const [showFieldSettings, setShowFieldSettings] = useState(false);
   const [exportedAt, setExportedAt] = useState('');
+  const [enableAmountMatchReview, setEnableAmountMatchReview] = useState(true);
 
   useEffect(() => {
     if (!downloadUrl) {
@@ -78,6 +79,7 @@ function InvoiceLedgerPage() {
   );
   const parsedCount = items.filter((item) => Boolean(item.invoiceData)).length;
   const duplicateCount = items.filter((item) => item.duplicateStatus === 'duplicate').length;
+  const amountMatchCount = items.filter((item) => item.amountMatchStatus === 'sameAmount').length;
   const itemErrorCount = items.filter((item) => item.status === 'error').length;
   const hasProcessedResult = items.some((item) => item.invoiceData || item.error);
   const activeStep = downloadUrl || isRunning || hasProcessedResult ? 3 : items.length ? 2 : 1;
@@ -259,23 +261,44 @@ function InvoiceLedgerPage() {
             invoiceData: item.invoiceData
           }))
       );
+      const amountMatchResult = enableAmountMatchReview
+        ? buildAmountMatchResult(
+          finalItems
+            .filter((item) => item.invoiceData)
+            .map((item) => ({
+              id: item.id,
+              file: item.file,
+              invoiceData: item.invoiceData
+            }))
+        )
+        : [];
       const dedupMap = new Map(dedupResult.rows.map((item) => [item.id, item]));
+      const amountMatchMap = new Map(amountMatchResult.map((item) => [item.id, item]));
       const finalItemsWithDedup = finalItems.map((item) => {
         const dedupItem = dedupMap.get(item.id);
+        const amountMatchItem = amountMatchMap.get(item.id);
         return dedupItem
           ? {
             ...item,
             duplicateStatus: dedupItem.status,
             dedupBasis: dedupItem.dedupBasis,
             dedupSummary: dedupItem.dedupSummary,
-            dedupReason: dedupItem.dedupReason
+            dedupReason: dedupItem.dedupReason,
+            amountMatchStatus: amountMatchItem?.amountMatchStatus || '',
+            amountMatchBasis: amountMatchItem?.amountMatchBasis || '',
+            amountMatchSummary: amountMatchItem?.amountMatchSummary || '',
+            amountMatchReason: amountMatchItem?.amountMatchReason || ''
           }
           : {
             ...item,
             duplicateStatus: '',
             dedupBasis: '',
             dedupSummary: '',
-            dedupReason: ''
+            dedupReason: '',
+            amountMatchStatus: amountMatchItem?.amountMatchStatus || '',
+            amountMatchBasis: amountMatchItem?.amountMatchBasis || '',
+            amountMatchSummary: amountMatchItem?.amountMatchSummary || '',
+            amountMatchReason: amountMatchItem?.amountMatchReason || ''
           };
       });
 
@@ -294,8 +317,8 @@ function InvoiceLedgerPage() {
       setDownloadName(createInvoiceTimestampedName('发票台账', 'xlsx'));
       setStatusText(
         failureTotal > 0
-          ? `处理完成：成功识别 ${successTotal} 张，失败 ${failureTotal} 张，标记重复 ${dedupResult.rows.filter((item) => item.status === 'duplicate').length} 张，已生成 Excel 台账。`
-          : `处理完成：共识别 ${successTotal} 张发票，标记重复 ${dedupResult.rows.filter((item) => item.status === 'duplicate').length} 张，已生成 Excel 台账。`
+          ? `处理完成：成功识别 ${successTotal} 张，失败 ${failureTotal} 张，标记重复 ${dedupResult.rows.filter((item) => item.status === 'duplicate').length} 张${enableAmountMatchReview ? `，金额一致提醒 ${amountMatchResult.filter((item) => item.amountMatchStatus === 'sameAmount').length} 张` : ''}，已生成 Excel 台账。`
+          : `处理完成：共识别 ${successTotal} 张发票，标记重复 ${dedupResult.rows.filter((item) => item.status === 'duplicate').length} 张${enableAmountMatchReview ? `，金额一致提醒 ${amountMatchResult.filter((item) => item.amountMatchStatus === 'sameAmount').length} 张` : ''}，已生成 Excel 台账。`
       );
       toast.success(`台账导出完成，已生成 ${successTotal} 张发票的 Excel 文件。`);
     } catch (runtimeError) {
@@ -327,7 +350,7 @@ function InvoiceLedgerPage() {
             <ul className="invoice-points">
               <li>发票文件仅在本地浏览器内处理，不上传服务器。</li>
               <li>导出列支持自由勾选，并可在弹窗内拖拽调整顺序。</li>
-              <li>重复发票会自动标记，不会默认删除，方便后续复核。</li>
+              <li>默认标记标准重复，并可开启“金额一致提醒”辅助排查重开或重复报销。</li>
             </ul>
           </div>
           <div className="invoice-summary-grid">
@@ -346,6 +369,10 @@ function InvoiceLedgerPage() {
             <div className="invoice-summary-card">
               <span>重复标记</span>
               <strong>{duplicateCount}</strong>
+            </div>
+            <div className="invoice-summary-card">
+              <span>金额一致提醒</span>
+              <strong>{enableAmountMatchReview ? amountMatchCount : '--'}</strong>
             </div>
           </div>
         </section>
@@ -435,7 +462,7 @@ function InvoiceLedgerPage() {
             <div className="invoice-panel-head">
               <div>
                 <h3>2. 设置导出字段</h3>
-                <p>导出字段请在弹窗中配置，页面仅展示当前将要导出的列。</p>
+                <p>导出字段请在弹窗中配置，并可选择是否开启金额一致提醒。</p>
               </div>
               <div className="invoice-panel-actions">
                 <button
@@ -452,6 +479,31 @@ function InvoiceLedgerPage() {
             <div className="invoice-preview-box">
               <span>导出列预览</span>
               <strong>{selectedFields.map((field) => field.label).join(' / ')}</strong>
+            </div>
+
+            <div className="invoice-preview-box">
+              <span>提醒策略</span>
+              <div style={{ marginTop: 10, display: 'grid', gap: 10 }}>
+                <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                  <input type="checkbox" checked readOnly />
+                  <span>
+                    <strong style={{ display: 'block' }}>标准重复标记</strong>
+                    <span style={{ color: '#6b829a', fontSize: 13 }}>按发票代码、号码、日期、价税合计等稳定字段判定真重复。</span>
+                  </span>
+                </label>
+                <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                  <input
+                    type="checkbox"
+                    checked={enableAmountMatchReview}
+                    disabled={isRunning}
+                    onChange={(event) => setEnableAmountMatchReview(event.target.checked)}
+                  />
+                  <span>
+                    <strong style={{ display: 'block' }}>金额一致提醒</strong>
+                    <span style={{ color: '#6b829a', fontSize: 13 }}>仅按价税合计一致做弱提醒，适合排查重开发票，不会直接当成真重复。</span>
+                  </span>
+                </label>
+              </div>
             </div>
           </section>
 
@@ -519,6 +571,8 @@ function InvoiceLedgerPage() {
                       className={
                         row.duplicateStatus === '重复'
                           ? 'invoice-ledger-row is-duplicate'
+                          : row.amountMatchStatus === '金额一致'
+                            ? 'invoice-ledger-row is-amount-match'
                           : row.duplicateStatus === '信息不足'
                             ? 'invoice-ledger-row is-weak'
                             : 'invoice-ledger-row'
@@ -587,12 +641,13 @@ function InvoiceLedgerPage() {
                       <span>{prettyBytes(item.file.size)}</span>
                       <span>{item.file.type || 'PDF 文件'}</span>
                       {item.duplicateStatus ? <span>{item.duplicateStatus === 'duplicate' ? '重复' : item.duplicateStatus === 'keptWeak' ? '信息不足' : '唯一'}</span> : null}
+                      {item.amountMatchStatus === 'sameAmount' ? <span>金额一致</span> : null}
                     </div>
 
                     {item.invoiceData ? (
                       <div className="invoice-field-chips">
                         {selectedFields
-                          .filter((field) => !['sequence', 'fileName', 'fileSize', 'statusText', 'error'].includes(field.key))
+                          .filter((field) => !['sequence', 'fileName', 'fileSize', 'exportTime', 'duplicateStatus', 'duplicateBasis', 'duplicateReason', 'amountMatchStatus', 'amountMatchBasis', 'amountMatchReason', 'statusText', 'error'].includes(field.key))
                           .map((field) => {
                             const value = item.invoiceData?.[field.key];
                             return value ? (
@@ -615,6 +670,13 @@ function InvoiceLedgerPage() {
                       </p>
                     ) : null}
                     {!item.error && item.dedupReason ? <p className="invoice-muted">{item.dedupReason}</p> : null}
+                    {!item.error && item.amountMatchStatus === 'sameAmount' ? (
+                      <p className="invoice-muted">
+                        金额一致提醒：{item.amountMatchBasis || '价税合计一致'}
+                        {item.amountMatchSummary ? `（${item.amountMatchSummary}）` : ''}
+                        {item.amountMatchReason ? `，${item.amountMatchReason}` : ''}
+                      </p>
+                    ) : null}
                   </article>
                 );
               })}

@@ -1,4 +1,4 @@
-import { getLedgerDuplicateLabel } from './invoiceDedup';
+import { getLedgerAmountMatchLabel, getLedgerDuplicateLabel } from './invoiceDedup';
 import { formatInvoiceFieldValue, getInvoiceFieldLabel } from './invoicePdf';
 
 const LEDGER_META_FIELDS = [
@@ -9,6 +9,9 @@ const LEDGER_META_FIELDS = [
   { key: 'duplicateStatus', label: '是否重复' },
   { key: 'duplicateBasis', label: '重复依据' },
   { key: 'duplicateReason', label: '重复说明' },
+  { key: 'amountMatchStatus', label: '金额提醒' },
+  { key: 'amountMatchBasis', label: '金额提醒依据' },
+  { key: 'amountMatchReason', label: '金额提醒说明' },
   { key: 'statusText', label: '处理状态' },
   { key: 'error', label: '失败原因' }
 ];
@@ -91,6 +94,9 @@ export function buildInvoiceLedgerRows(items, statusLabelMap = {}, options = {})
     duplicateStatus: getLedgerDuplicateLabel(item.duplicateStatus),
     duplicateBasis: item.dedupBasis || '',
     duplicateReason: item.dedupReason || '',
+    amountMatchStatus: getLedgerAmountMatchLabel(item.amountMatchStatus),
+    amountMatchBasis: item.amountMatchBasis || '',
+    amountMatchReason: item.amountMatchReason || '',
     statusText: statusLabelMap[item.status] || item.status || '',
     error: item.error || '',
     invoiceData: item.invoiceData || {}
@@ -113,6 +119,12 @@ export function getInvoiceLedgerCellValue(fieldKey, row) {
       return row.duplicateBasis;
     case 'duplicateReason':
       return row.duplicateReason;
+    case 'amountMatchStatus':
+      return row.amountMatchStatus;
+    case 'amountMatchBasis':
+      return row.amountMatchBasis;
+    case 'amountMatchReason':
+      return row.amountMatchReason;
     case 'statusText':
       return row.statusText;
     case 'error':
@@ -141,35 +153,91 @@ function buildInvoiceLedgerSheetData(rows, selectedFieldKeys) {
 }
 
 export async function createInvoiceLedgerBlob(rows, selectedFieldKeys) {
-  const XLSX = await import('xlsx');
   const { activeFields, headerRow, bodyRows } = buildInvoiceLedgerSheetData(rows, selectedFieldKeys);
-  const worksheet = XLSX.utils.aoa_to_sheet([headerRow, ...bodyRows]);
-
-  worksheet['!cols'] = activeFields.map((field) => {
-    if (field.key === 'fileName' || field.key === 'remarks' || field.key === 'projectName' || field.key === 'duplicateReason') {
-      return { wch: 34 };
-    }
-    if (field.key === 'buyerName' || field.key === 'sellerName') {
-      return { wch: 24 };
-    }
-    if (field.key === 'duplicateBasis') {
-      return { wch: 24 };
-    }
-    if (field.key === 'exportTime') {
-      return { wch: 20 };
-    }
-    if (field.key === 'error') {
-      return { wch: 28 };
-    }
-    return { wch: 16 };
+  const ExcelJSImport = await import('exceljs/dist/exceljs.min.js');
+  const ExcelJS = ExcelJSImport.default || ExcelJSImport;
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('发票台账', {
+    views: [{ state: 'frozen', ySplit: 1 }]
   });
 
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, '发票台账');
-  const arrayBuffer = XLSX.write(workbook, {
-    bookType: 'xlsx',
-    type: 'array'
+  const BORDER_STYLE = {
+    top: { style: 'thin', color: { argb: 'FFE2EAF3' } },
+    left: { style: 'thin', color: { argb: 'FFE2EAF3' } },
+    bottom: { style: 'thin', color: { argb: 'FFE2EAF3' } },
+    right: { style: 'thin', color: { argb: 'FFE2EAF3' } }
+  };
+  const HEADER_FILL = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF4F8FC' } };
+  const DUPLICATE_FILL = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF0EE' } };
+  const AMOUNT_MATCH_FILL = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF7E8' } };
+  const WEAK_FILL = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFAEF' } };
+
+  worksheet.columns = activeFields.map((field) => ({
+    header: field.label,
+    key: field.key,
+    width: (
+      field.key === 'fileName'
+      || field.key === 'remarks'
+      || field.key === 'projectName'
+      || field.key === 'duplicateReason'
+      || field.key === 'amountMatchReason'
+    )
+      ? 34
+      : (field.key === 'buyerName' || field.key === 'sellerName')
+        ? 24
+        : field.key === 'duplicateBasis'
+          ? 24
+          : field.key === 'amountMatchBasis'
+            ? 18
+            : field.key === 'exportTime'
+              ? 20
+              : field.key === 'error'
+                ? 28
+                : 16
+  }));
+
+  const header = worksheet.getRow(1);
+  header.values = headerRow;
+  header.height = 24;
+  header.eachCell((cell) => {
+    cell.font = { bold: true, color: { argb: 'FF35536B' } };
+    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    cell.fill = HEADER_FILL;
+    cell.border = BORDER_STYLE;
   });
+
+  bodyRows.forEach((values, index) => {
+    const row = worksheet.addRow(values);
+    const sourceRow = rows[index];
+    const fill = sourceRow?.duplicateStatus === '重复'
+      ? DUPLICATE_FILL
+      : sourceRow?.amountMatchStatus === '金额一致'
+        ? AMOUNT_MATCH_FILL
+        : sourceRow?.duplicateStatus === '信息不足'
+          ? WEAK_FILL
+          : null;
+
+    row.eachCell((cell) => {
+      cell.alignment = {
+        vertical: 'top',
+        horizontal: 'left',
+        wrapText: false
+      };
+      cell.border = BORDER_STYLE;
+      if (fill) {
+        cell.fill = fill;
+      }
+    });
+  });
+
+  if (activeFields.length) {
+    worksheet.autoFilter = {
+      from: { row: 1, column: 1 },
+      to: { row: Math.max(1, worksheet.rowCount), column: activeFields.length }
+    };
+  }
+
+  const arrayBuffer = await workbook.xlsx.writeBuffer();
   return new Blob([arrayBuffer], {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
   });
