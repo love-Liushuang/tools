@@ -2,6 +2,7 @@ export const categories = [
     { key: 'all', label: '全部工具' },
     { key: 'invoice', label: '发票工具' },
     { key: 'image', label: '图片处理' },
+    { key: 'fun', label: '娱乐' },
     { key: 'video', label: '视频处理' },
     { key: 'text', label: '文本处理' },
     { key: 'wps', label: '文档 / PDF' },
@@ -101,6 +102,13 @@ export const tools = [
         desc: '支持 WebP/PNG/JPG 批量转换与尺寸限制。',
         category: 'image',
         path: '/tools/image-convert'
+    },
+    {
+        id: 'bead-pattern',
+        name: '拼豆图纸生成器',
+        desc: '本地上传图片，自动匹配固定色卡并导出 PNG/PDF 图纸。',
+        category: ['image', 'fun'],
+        path: '/tools/bead-pattern'
     },
     {
         id: 'getgzhtoutu',

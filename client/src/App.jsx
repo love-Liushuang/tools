@@ -26,6 +26,7 @@ import EmojiTopicDetailPage from './pages/EmojiTopicDetailPage';
 import WechatCoverPage from './pages/WechatCoverPage';
 import NotFoundPage from './pages/NotFoundPage';
 import ChangelogPage from './pages/ChangelogPage';
+import BeadPatternPage from './pages/BeadPatternPage';
 
 const InvoiceRenamePage = lazy(() => import('./pages/InvoiceRenamePage'));
 const InvoiceDedupPage = lazy(() => import('./pages/InvoiceDedupPage'));
@@ -110,6 +111,7 @@ function App() {
             )}
           />
           <Route path="tools/image-convert" element={<ImageConvertPage />} />
+          <Route path="tools/bead-pattern" element={<BeadPatternPage />} />
           <Route path="tools/changelog" element={<ChangelogPage />} />
           <Route path="tools/svg-base64" element={<SvgBase64Page />} />
           <Route path="tools/svg-path" element={<SvgPathPage />} />

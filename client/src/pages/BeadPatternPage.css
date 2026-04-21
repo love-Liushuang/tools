@@ -1,0 +1,512 @@
+.bead-page {
+  display: grid;
+  gap: 16px;
+}
+
+.bead-panel {
+  border: 1px solid #dfe9f4;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top right, rgba(255, 186, 102, 0.14), transparent 28%),
+    linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  padding: 18px;
+}
+
+.bead-dropzone {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 18px;
+  border: 2px dashed #c8d8eb;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #f5fbff 0%, #fffef8 100%);
+}
+
+.bead-dropzone.is-active {
+  border-color: #ff8b1f;
+  background: linear-gradient(135deg, #fff7eb 0%, #fffef8 100%);
+}
+
+.bead-dropzone h2,
+.bead-editor-head h2,
+.bead-side-head h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.bead-dropzone p,
+.bead-editor-head p,
+.bead-side-head p {
+  margin: 6px 0 0;
+  color: #5d7186;
+}
+
+.bead-dropzone-actions,
+.bead-toolbar,
+.bead-preview-options,
+.bead-history-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.bead-hidden-input {
+  display: none;
+}
+
+.bead-primary-btn,
+.bead-secondary-btn,
+.bead-danger-btn,
+.bead-tool-btn,
+.bead-palette-swatch,
+.bead-material-item {
+  border: 1px solid #d1deec;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #1d3853;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.bead-primary-btn:hover,
+.bead-secondary-btn:hover,
+.bead-danger-btn:hover,
+.bead-tool-btn:hover,
+.bead-palette-swatch:hover,
+.bead-material-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 18px rgba(30, 77, 122, 0.08);
+}
+
+.bead-primary-btn,
+.bead-secondary-btn,
+.bead-danger-btn,
+.bead-tool-btn {
+  padding: 10px 14px;
+  font-size: 14px;
+}
+
+.bead-primary-btn {
+  border-color: #ff8b1f;
+  background: linear-gradient(135deg, #ff9f42 0%, #ff7b00 100%);
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.bead-secondary-btn {
+  background: #ffffff;
+}
+
+.bead-danger-btn {
+  border-color: #f0c1bc;
+  color: #b33f32;
+  background: #fff5f4;
+}
+
+.bead-tool-btn.is-active,
+.bead-palette-swatch.is-active,
+.bead-material-item.is-active {
+  border-color: #ff8b1f;
+  box-shadow: 0 0 0 3px rgba(255, 139, 31, 0.15);
+}
+
+.bead-source-meta {
+  color: #597089;
+  font-size: 13px;
+}
+
+.bead-controls-grid,
+.bead-slider-grid,
+.bead-stats-grid {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.bead-controls-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.bead-slider-grid {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.bead-field {
+  display: grid;
+  gap: 8px;
+}
+
+.bead-field span {
+  font-size: 13px;
+  color: #4b637d;
+  font-weight: 600;
+}
+
+.bead-field input,
+.bead-field select,
+.bead-field textarea {
+  width: 100%;
+  border: 1px solid #cedbea;
+  border-radius: 12px;
+  padding: 11px 12px;
+  background: #ffffff;
+  color: #17324d;
+  font-size: 14px;
+}
+
+.bead-field input[type="range"] {
+  padding: 0;
+}
+
+.bead-inline-input {
+  display: grid;
+  grid-template-columns: 1fr 84px;
+  gap: 8px;
+  align-items: center;
+}
+
+.bead-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 12px;
+  border: 1px solid #d7e4f2;
+  border-radius: 12px;
+  background: #fbfdff;
+  color: #264666;
+}
+
+.bead-check input {
+  margin: 0;
+}
+
+.bead-status {
+  margin-top: 14px;
+}
+
+.bead-progress-bar {
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #edf4fb;
+}
+
+.bead-progress-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ff9f42 0%, #ff7b00 100%);
+}
+
+.bead-status p,
+.bead-error {
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+
+.bead-error {
+  color: #b33f32;
+}
+
+.bead-preview-strip {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: minmax(220px, 340px) 1fr;
+  gap: 14px;
+}
+
+.bead-source-preview {
+  display: grid;
+  gap: 10px;
+}
+
+.bead-source-preview h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.bead-source-preview img,
+.bead-history-card img {
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid #d9e4ef;
+  background: #ffffff;
+  object-fit: contain;
+}
+
+.bead-empty-box {
+  display: grid;
+  place-items: center;
+  min-height: 140px;
+  border: 1px dashed #cddbeb;
+  border-radius: 14px;
+  background: #f8fbff;
+  color: #6a7f96;
+  text-align: center;
+  padding: 18px;
+}
+
+.bead-stats-grid {
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  margin-top: 0;
+}
+
+.bead-stat-card {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid #deebf6;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.bead-stat-card span,
+.bead-stat-card small {
+  color: #5d7186;
+}
+
+.bead-stat-card strong {
+  font-size: 24px;
+  color: #16324d;
+}
+
+.bead-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.95fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.bead-editor-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.bead-editor-head,
+.bead-side-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.bead-toolbar-compact {
+  justify-content: flex-end;
+}
+
+.bead-zoom-field {
+  min-width: 180px;
+}
+
+.bead-selected-color {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid #e0ebf5;
+  border-radius: 14px;
+  background: #fbfdff;
+}
+
+.bead-selected-color span {
+  color: #5b7289;
+}
+
+.bead-selected-color strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bead-selected-color i {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.bead-canvas-shell {
+  overflow: auto;
+  max-height: 75vh;
+  min-height: 320px;
+  border: 1px solid #dce8f2;
+  border-radius: 16px;
+  padding: 12px;
+  background:
+    linear-gradient(45deg, #f5f9ff 25%, transparent 25%, transparent 75%, #f5f9ff 75%, #f5f9ff),
+    linear-gradient(45deg, #f5f9ff 25%, #ffffff 25%, #ffffff 75%, #f5f9ff 75%, #f5f9ff);
+  background-size: 24px 24px;
+  background-position: 0 0, 12px 12px;
+}
+
+.bead-canvas {
+  display: block;
+  margin: 0 auto;
+  touch-action: none;
+  image-rendering: pixelated;
+  background: #ffffff;
+  box-shadow: 0 16px 28px rgba(30, 77, 122, 0.08);
+}
+
+.bead-empty-editor {
+  min-height: 400px;
+}
+
+.bead-hover-meta {
+  color: #567089;
+  font-size: 13px;
+}
+
+.bead-side-column {
+  display: grid;
+  gap: 16px;
+}
+
+.bead-side-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: #fff1da;
+  color: #b56800;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.bead-palette-grid,
+.bead-material-list,
+.bead-history-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.bead-palette-grid {
+  grid-template-columns: repeat(auto-fill, minmax(116px, 1fr));
+  max-height: 560px;
+  overflow: auto;
+}
+
+.bead-palette-swatch,
+.bead-material-item {
+  display: grid;
+  gap: 6px;
+  text-align: left;
+  padding: 10px;
+}
+
+.bead-palette-dot,
+.bead-material-chip {
+  width: 100%;
+  height: 26px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.bead-palette-swatch strong,
+.bead-material-item strong {
+  font-size: 14px;
+}
+
+.bead-palette-swatch small,
+.bead-palette-swatch em,
+.bead-material-item span,
+.bead-material-item em,
+.bead-history-body span,
+.bead-history-body small {
+  color: #60758c;
+  font-style: normal;
+}
+
+.bead-history-card {
+  display: grid;
+  grid-template-columns: 84px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid #deebf6;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.bead-history-card img,
+.bead-history-thumb {
+  width: 84px;
+  height: 84px;
+}
+
+.bead-history-body {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.bead-history-body strong {
+  font-size: 14px;
+}
+
+.bead-empty-side {
+  min-height: 120px;
+}
+
+@media (max-width: 980px) {
+  .bead-preview-strip,
+  .bead-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .bead-palette-grid {
+    max-height: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .bead-panel {
+    padding: 14px;
+  }
+
+  .bead-dropzone,
+  .bead-editor-head,
+  .bead-side-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .bead-history-card {
+    display: grid;
+  }
+
+  .bead-inline-input {
+    grid-template-columns: 1fr;
+  }
+
+  .bead-stats-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .bead-canvas-shell {
+    min-height: 260px;
+  }
+}
+
+@media (max-width: 520px) {
+  .bead-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .bead-history-card {
+    grid-template-columns: 1fr;
+  }
+
+  .bead-history-card img,
+  .bead-history-thumb {
+    width: 100%;
+    height: auto;
+  }
+}
