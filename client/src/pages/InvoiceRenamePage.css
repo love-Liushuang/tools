@@ -468,6 +468,10 @@
   background: #fff4f2;
 }
 
+.invoice-ledger-row.is-amount-match td {
+  background: #fff8e8;
+}
+
 .invoice-ledger-row.is-weak td {
   background: #fff9ef;
 }

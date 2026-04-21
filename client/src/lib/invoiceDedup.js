@@ -104,6 +104,56 @@ export function buildDedupResult(parsedItems) {
   };
 }
 
+export function buildAmountMatchResult(parsedItems) {
+  const groupedMap = new Map();
+  const resultMap = new Map();
+
+  parsedItems.forEach((item, index) => {
+    const totalAmount = getTotalAmountValue(item.invoiceData);
+    const enrichedItem = {
+      ...item,
+      order: index + 1,
+      amountMatchKey: totalAmount ? `amount:${totalAmount}` : '',
+      amountMatchBasis: totalAmount ? '价税合计一致' : '未识别到价税合计',
+      amountMatchSummary: totalAmount || '未识别到价税合计'
+    };
+
+    if (!totalAmount) {
+      resultMap.set(item.id, {
+        ...enrichedItem,
+        amountMatchStatus: '',
+        amountMatchReason: ''
+      });
+      return;
+    }
+
+    if (!groupedMap.has(totalAmount)) {
+      groupedMap.set(totalAmount, []);
+    }
+    groupedMap.get(totalAmount).push(enrichedItem);
+  });
+
+  groupedMap.forEach((group) => {
+    group.forEach((item) => {
+      resultMap.set(item.id, {
+        ...item,
+        amountMatchStatus: group.length > 1 ? 'sameAmount' : '',
+        amountMatchReason: group.length > 1
+          ? `与 ${group.length - 1} 张发票价税合计一致，请留意是否存在重开或重复报销。`
+          : ''
+      });
+    });
+  });
+
+  return parsedItems.map((item) => resultMap.get(item.id) || {
+    ...item,
+    amountMatchStatus: '',
+    amountMatchReason: '',
+    amountMatchBasis: '',
+    amountMatchSummary: ''
+  });
+}
+
 export function getLedgerDuplicateLabel(status) {
   if (status === 'duplicate') {
     return '重复';
@@ -113,6 +163,13 @@ export function getLedgerDuplicateLabel(status) {
   }
   if (status === 'kept') {
     return '唯一';
+  }
+  return '';
+}
+
+export function getLedgerAmountMatchLabel(status) {
+  if (status === 'sameAmount') {
+    return '金额一致';
   }
   return '';
 }
