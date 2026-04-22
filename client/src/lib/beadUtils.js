@@ -227,18 +227,31 @@ function getColorBrightness(rgb) {
 }
 
 function drawBead(ctx, x, y, size, color) {
+  const blockX = Math.round(x);
+  const blockY = Math.round(y);
+  const blockSize = Math.max(1, Math.round(size));
+
   ctx.save();
-  ctx.beginPath();
-  ctx.arc(x + size / 2, y + size / 2, Math.max(2, size / 2 - 1), 0, Math.PI * 2);
   ctx.fillStyle = color.hex;
-  ctx.fill();
-  ctx.lineWidth = Math.max(0.5, size * 0.05);
-  ctx.strokeStyle = 'rgba(0, 0, 0, 0.18)';
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(x + size * 0.36, y + size * 0.34, Math.max(1.4, size * 0.12), 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-  ctx.fill();
+  ctx.fillRect(blockX, blockY, blockSize, blockSize);
+
+  if (blockSize >= 8) {
+    const edge = Math.min(Math.max(1, Math.round(blockSize * 0.12)), Math.max(1, Math.floor(blockSize / 4)));
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
+    ctx.fillRect(blockX, blockY, blockSize, edge);
+    ctx.fillRect(blockX, blockY, edge, blockSize);
+
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.14)';
+    ctx.fillRect(blockX, blockY + blockSize - edge, blockSize, edge);
+    ctx.fillRect(blockX + blockSize - edge, blockY, edge, blockSize);
+  }
+
+  if (blockSize >= 2) {
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = blockSize >= 10 ? 'rgba(0, 0, 0, 0.18)' : 'rgba(0, 0, 0, 0.1)';
+    ctx.strokeRect(blockX + 0.5, blockY + 0.5, blockSize - 1, blockSize - 1);
+  }
+
   ctx.restore();
 }
 
