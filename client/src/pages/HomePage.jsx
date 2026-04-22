@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { categories, featuredToolIds, tools } from '../data/tools';
 
-const FEATURED_DEFAULT_COUNT = 6;
+const FEATURED_DEFAULT_COUNT = 9;
 
 function getToolCategoryKeys(tool) {
   const raw = tool?.category;

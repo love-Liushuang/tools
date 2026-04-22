@@ -9,8 +9,14 @@ import {
   createDefaultRuleProfile
 } from '../lib/invoicePdf';
 
-function InvoiceRuleSettingsModal({ invoiceTypeKey, initialProfile, onSave, onCancel }) {
-  const startType = invoiceTypeKey || DEFAULT_INVOICE_TYPE;
+function InvoiceRuleSettingsModal({
+  invoiceTypeKey,
+  fixedInvoiceTypeKey,
+  initialProfile,
+  onSave,
+  onCancel
+}) {
+  const startType = fixedInvoiceTypeKey || invoiceTypeKey || DEFAULT_INVOICE_TYPE;
   const [localType, setLocalType] = useState(startType);
   const [profile, setProfile] = useState(() => validateAndNormalizeProfile(initialProfile || createDefaultRuleProfile(startType), startType));
   const [preview, setPreview] = useState('');
@@ -18,6 +24,11 @@ function InvoiceRuleSettingsModal({ invoiceTypeKey, initialProfile, onSave, onCa
   const dragOverRef = useRef(null);
 
   useEffect(() => {
+    if (fixedInvoiceTypeKey && localType !== fixedInvoiceTypeKey) {
+      setLocalType(fixedInvoiceTypeKey);
+      return;
+    }
+
     // when type changes, load default profile unless an explicit initialProfile was provided
     if (initialProfile && initialProfile.invoiceTypeKey === localType) {
       setProfile(validateAndNormalizeProfile(initialProfile, localType));
@@ -26,7 +37,7 @@ function InvoiceRuleSettingsModal({ invoiceTypeKey, initialProfile, onSave, onCa
 
     const defaults = createDefaultRuleProfile(localType);
     setProfile(defaults);
-  }, [localType, initialProfile]);
+  }, [fixedInvoiceTypeKey, localType, initialProfile]);
 
   useEffect(() => {
     setPreview(buildRulePreview(localType, profile));
@@ -83,20 +94,24 @@ function InvoiceRuleSettingsModal({ invoiceTypeKey, initialProfile, onSave, onCa
         <div className="invoice-panel-head">
           <div>
             <h3>文件重命名规则</h3>
-            <p style={{ marginTop: 8, color: '#58718a' }}>在此为不同发票类型分别配置命名规则与优先字段。</p>
+            <p style={{ marginTop: 8, color: '#58718a' }}>
+              {fixedInvoiceTypeKey ? '在此配置当前工具对应发票类型的命名规则与优先字段。' : '在此为不同发票类型分别配置命名规则与优先字段。'}
+            </p>
           </div>
           <div />
         </div>
 
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 8, flexWrap: 'wrap' }}>
-          <label  className="invoice-separator-field" style={{ display: 'flex', gap: 8, alignItems: 'center', fontWeight: 700 }}>
-            <span>发票类型</span>
-            <select value={localType} onChange={(e) => setLocalType(e.target.value)}>
-              {INVOICE_TYPES.map((t) => (
-                <option key={t.key} value={t.key}>{t.label}</option>
-              ))}
-            </select>
-          </label>
+          {!fixedInvoiceTypeKey ? (
+            <label className="invoice-separator-field" style={{ display: 'flex', gap: 8, alignItems: 'center', fontWeight: 700 }}>
+              <span>发票类型</span>
+              <select value={localType} onChange={(e) => setLocalType(e.target.value)}>
+                {INVOICE_TYPES.map((t) => (
+                  <option key={t.key} value={t.key}>{t.label}</option>
+                ))}
+              </select>
+            </label>
+          ) : null}
 
           <label className="invoice-separator-field">
             <span>分隔符</span>

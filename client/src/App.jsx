@@ -58,12 +58,20 @@ function App() {
           <Route path="unlock-pdf" element={<Navigate to="/tools/unlock-pdf" replace />} />
           <Route path="pdf-unlock" element={<Navigate to="/tools/unlock-pdf" replace />} />
           <Route path="PDF解密" element={<Navigate to="/tools/unlock-pdf" replace />} />
-          <Route path="invoice-pdf-rename" element={<Navigate to="/tools/invoice-pdf-rename" replace />} />
-          <Route path="电子发票批量重命名" element={<Navigate to="/tools/invoice-pdf-rename" replace />} />
+          <Route path="invoice-pdf-rename" element={<Navigate to="/tools/invoice-pdf-rename-standard" replace />} />
+          <Route path="电子发票批量重命名" element={<Navigate to="/tools/invoice-pdf-rename-standard" replace />} />
+          <Route path="invoice-pdf-rename-standard" element={<Navigate to="/tools/invoice-pdf-rename-standard" replace />} />
+          <Route path="普通发票批量重命名" element={<Navigate to="/tools/invoice-pdf-rename-standard" replace />} />
+          <Route path="invoice-pdf-rename-train" element={<Navigate to="/tools/invoice-pdf-rename-train" replace />} />
+          <Route path="火车票批量重命名" element={<Navigate to="/tools/invoice-pdf-rename-train" replace />} />
           <Route path="invoice-pdf-dedup" element={<Navigate to="/tools/invoice-pdf-dedup" replace />} />
           <Route path="电子发票批量去重" element={<Navigate to="/tools/invoice-pdf-dedup" replace />} />
-          <Route path="invoice-ledger-export" element={<Navigate to="/tools/invoice-ledger-export" replace />} />
-          <Route path="电子发票台账导出" element={<Navigate to="/tools/invoice-ledger-export" replace />} />
+          <Route path="invoice-ledger-export" element={<Navigate to="/tools/invoice-ledger-export-standard" replace />} />
+          <Route path="电子发票台账导出" element={<Navigate to="/tools/invoice-ledger-export-standard" replace />} />
+          <Route path="invoice-ledger-export-standard" element={<Navigate to="/tools/invoice-ledger-export-standard" replace />} />
+          <Route path="普通发票台账导出" element={<Navigate to="/tools/invoice-ledger-export-standard" replace />} />
+          <Route path="invoice-ledger-export-train" element={<Navigate to="/tools/invoice-ledger-export-train" replace />} />
+          <Route path="火车票台账导出" element={<Navigate to="/tools/invoice-ledger-export-train" replace />} />
           <Route path="svg-base64" element={<Navigate to="/tools/svg-base64" replace />} />
           <Route path="SVG转Base64" element={<Navigate to="/tools/svg-base64" replace />} />
           <Route path="svg-path" element={<Navigate to="/tools/svg-path" replace />} />
@@ -87,9 +95,29 @@ function App() {
           <Route path="tools/unlock-pdf" element={<UnlockPdfPage />} />
           <Route
             path="tools/invoice-pdf-rename"
+            element={<Navigate to="/tools/invoice-pdf-rename-standard" replace />}
+          />
+          <Route
+            path="tools/invoice-pdf-rename-standard"
             element={(
               <LazyPage>
-                <InvoiceRenamePage />
+                <InvoiceRenamePage
+                  fixedInvoiceTypeKey="standard"
+                  toolTitle="批量重命名与金额汇总（普通发票）"
+                  toolDesc="本地完成普通电子发票解析、金额汇总、批量重命名和 ZIP 打包下载。"
+                />
+              </LazyPage>
+            )}
+          />
+          <Route
+            path="tools/invoice-pdf-rename-train"
+            element={(
+              <LazyPage>
+                <InvoiceRenamePage
+                  fixedInvoiceTypeKey="train"
+                  toolTitle="批量重命名与金额汇总（火车票）"
+                  toolDesc="本地完成铁路电子客票解析、票价汇总、批量重命名和 ZIP 打包下载。"
+                />
               </LazyPage>
             )}
           />
@@ -103,9 +131,29 @@ function App() {
           />
           <Route
             path="tools/invoice-ledger-export"
+            element={<Navigate to="/tools/invoice-ledger-export-standard" replace />}
+          />
+          <Route
+            path="tools/invoice-ledger-export-standard"
             element={(
               <LazyPage>
-                <InvoiceLedgerPage />
+                <InvoiceLedgerPage
+                  fixedInvoiceTypeKey="standard"
+                  toolTitle="台账导出（普通发票）"
+                  toolDesc="本地批量识别普通电子发票，按所选字段生成 Excel 台账，适合整理报销、归档和对账数据。"
+                />
+              </LazyPage>
+            )}
+          />
+          <Route
+            path="tools/invoice-ledger-export-train"
+            element={(
+              <LazyPage>
+                <InvoiceLedgerPage
+                  fixedInvoiceTypeKey="train"
+                  toolTitle="台账导出（火车票）"
+                  toolDesc="本地批量识别铁路电子客票，按所选字段生成 Excel 台账，适合整理报销、归档和对账数据。"
+                />
               </LazyPage>
             )}
           />

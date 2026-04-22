@@ -35,6 +35,14 @@ const STATUS_LABEL_MAP = {
 
 const MIXED_INVOICE_TYPE_MESSAGE = '检测到普通发票和火车票混合上传，请分开操作。';
 
+function getInvoiceTypeLabel(invoiceTypeKey) {
+  return invoiceTypeKey === 'train' ? '火车票' : '普通发票';
+}
+
+function getInvoiceTypeToolLabel(invoiceTypeKey) {
+  return invoiceTypeKey === 'train' ? '火车票工具' : '普通发票工具';
+}
+
 function collectRecognizedInvoiceTypes(items) {
   return Array.from(new Set(
     (items || [])
@@ -48,6 +56,23 @@ function hasMixedInvoiceTypes(items) {
   return recognizedTypes.includes('train') && recognizedTypes.includes('standard');
 }
 
+function getInvoiceTypeMismatchMessage(expectedInvoiceTypeKey, recognizedTypes) {
+  if (!expectedInvoiceTypeKey || !recognizedTypes.length) {
+    return '';
+  }
+
+  if (recognizedTypes.length === 1 && recognizedTypes[0] === expectedInvoiceTypeKey) {
+    return '';
+  }
+
+  if (recognizedTypes.includes(expectedInvoiceTypeKey) && recognizedTypes.some((type) => type !== expectedInvoiceTypeKey)) {
+    return MIXED_INVOICE_TYPE_MESSAGE;
+  }
+
+  const targetType = recognizedTypes[0] === 'train' ? 'train' : 'standard';
+  return `当前工具仅支持${getInvoiceTypeLabel(expectedInvoiceTypeKey)}，请改用${getInvoiceTypeToolLabel(targetType)}。`;
+}
+
 function StepItem({ active, done, index, label }) {
   return (
     <div className={active ? 'invoice-step is-active' : done ? 'invoice-step is-done' : 'invoice-step'}>
@@ -57,7 +82,11 @@ function StepItem({ active, done, index, label }) {
   );
 }
 
-function InvoiceLedgerPage() {
+function InvoiceLedgerPage({
+  fixedInvoiceTypeKey = '',
+  toolTitle = 'PDF 电子发票台账导出',
+  toolDesc = '本地批量识别 PDF 发票，按所选字段生成 Excel 台账，适合整理报销、归档和对账数据。'
+}) {
   const inputRef = useRef(null);
   const toast = useToast();
   const [items, setItems] = useState([]);
@@ -67,11 +96,17 @@ function InvoiceLedgerPage() {
   const [error, setError] = useState('');
   const [downloadUrl, setDownloadUrl] = useState('');
   const [downloadName, setDownloadName] = useState('');
-  const [activeInvoiceTypeKey, setActiveInvoiceTypeKey] = useState(DEFAULT_INVOICE_TYPE);
+  const [activeInvoiceTypeKey, setActiveInvoiceTypeKey] = useState(fixedInvoiceTypeKey || DEFAULT_INVOICE_TYPE);
   const [fieldSelectionMap, setFieldSelectionMap] = useState(() => createDefaultLedgerFieldSelectionMap());
   const [showFieldSettings, setShowFieldSettings] = useState(false);
   const [exportedAt, setExportedAt] = useState('');
   const [enableAmountMatchReview, setEnableAmountMatchReview] = useState(true);
+
+  useEffect(() => {
+    if (fixedInvoiceTypeKey) {
+      setActiveInvoiceTypeKey(fixedInvoiceTypeKey);
+    }
+  }, [fixedInvoiceTypeKey]);
 
   useEffect(() => {
     if (!downloadUrl) {
@@ -212,6 +247,7 @@ function InvoiceLedgerPage() {
 
     try {
       const { results, successTotal, failureTotal } = await parseInvoiceFileQueue(queue, {
+        forceReparse: true,
         onEngineLoading() {
           setStatusText('正在加载 PDF 解析引擎...');
         },
@@ -263,21 +299,32 @@ function InvoiceLedgerPage() {
         return;
       }
 
-      if (hasMixedInvoiceTypes(results)) {
+      const recognizedTypes = collectRecognizedInvoiceTypes(results);
+      const mismatchMessage = getInvoiceTypeMismatchMessage(fixedInvoiceTypeKey, recognizedTypes);
+      if (mismatchMessage) {
+        setError(mismatchMessage);
+        setStatusText('');
+        toast.error(mismatchMessage);
+        return;
+      }
+
+      if (!fixedInvoiceTypeKey && hasMixedInvoiceTypes(results)) {
         setError(MIXED_INVOICE_TYPE_MESSAGE);
         setStatusText('');
         toast.error(MIXED_INVOICE_TYPE_MESSAGE);
         return;
       }
 
-      const recognizedTypeKey = collectRecognizedInvoiceTypes(results)[0] || activeInvoiceTypeKey;
+      const recognizedTypeKey = fixedInvoiceTypeKey || recognizedTypes[0] || activeInvoiceTypeKey;
       const exportFieldKeys = normalizeLedgerFieldSelection(fieldSelectionMap?.[recognizedTypeKey], recognizedTypeKey);
       if (!exportFieldKeys.length) {
         setError('请至少选择一列导出字段。');
         setStatusText('');
         return;
       }
-      setActiveInvoiceTypeKey(recognizedTypeKey);
+      if (!fixedInvoiceTypeKey) {
+        setActiveInvoiceTypeKey(recognizedTypeKey);
+      }
 
       const parsedIdSet = new Set(results.map((item) => item.id));
       results.forEach((item) => {
@@ -378,8 +425,8 @@ function InvoiceLedgerPage() {
 
   return (
     <ToolPageShell
-      title="PDF 电子发票台账导出"
-      desc="本地批量识别 PDF 发票，按所选字段生成 Excel 台账，适合整理报销、归档和对账数据。"
+      title={toolTitle}
+      desc={toolDesc}
     >
       <div className="invoice-tool">
         <section className="invoice-hero">
@@ -739,9 +786,12 @@ function InvoiceLedgerPage() {
       {showFieldSettings ? (
         <InvoiceLedgerFieldsModal
           initialInvoiceTypeKey={activeInvoiceTypeKey}
+          fixedInvoiceTypeKey={fixedInvoiceTypeKey}
           initialSelectionMap={fieldSelectionMap}
           onSave={({ invoiceTypeKey, selectionMap }) => {
-            setActiveInvoiceTypeKey(invoiceTypeKey);
+            if (!fixedInvoiceTypeKey) {
+              setActiveInvoiceTypeKey(invoiceTypeKey);
+            }
             setFieldSelectionMap(normalizeLedgerFieldSelectionMap(selectionMap));
             setShowFieldSettings(false);
           }}

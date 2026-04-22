@@ -163,6 +163,7 @@ function InvoiceDedupPage() {
 
     try {
       const { results, successTotal, failureTotal } = await parseInvoiceFileQueue(queue, {
+        forceReparse: true,
         onEngineLoading() {
           setStatusText('正在加载 PDF 解析引擎...');
         },

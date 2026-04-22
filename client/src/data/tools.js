@@ -75,11 +75,18 @@ export const tools = [
         path: '/tools/unlock-pdf'
     },
     {
-        id: 'invoice-pdf-rename',
-        name: 'PDF 电子发票批量重命名与金额汇总',
-        desc: '本地批量解析 PDF 电子发票，支持金额汇总、重命名并打包下载。',
+        id: 'invoice-pdf-rename-standard',
+        name: '批量重命名与金额汇总（普通发票）',
+        desc: '本地批量解析普通电子发票，支持金额汇总、重命名并打包下载。',
         category: ['invoice', 'wps'],
-        path: '/tools/invoice-pdf-rename'
+        path: '/tools/invoice-pdf-rename-standard'
+    },
+    {
+        id: 'invoice-pdf-rename-train',
+        name: '批量重命名与金额汇总（火车票）',
+        desc: '本地批量解析铁路电子客票，支持票价汇总、重命名并打包下载。',
+        category: ['invoice', 'wps'],
+        path: '/tools/invoice-pdf-rename-train'
     },
     {
         id: 'invoice-pdf-dedup',
@@ -89,11 +96,18 @@ export const tools = [
         path: '/tools/invoice-pdf-dedup'
     },
     {
-        id: 'invoice-ledger-export',
-        name: 'PDF 电子发票台账导出',
-        desc: '本地批量识别电子发票并导出 Excel 台账，支持自选导出列。',
+        id: 'invoice-ledger-export-standard',
+        name: '台账导出（普通发票）',
+        desc: '本地批量识别普通电子发票并导出 Excel 台账，支持自选导出列。',
         category: ['invoice', 'wps'],
-        path: '/tools/invoice-ledger-export'
+        path: '/tools/invoice-ledger-export-standard'
+    },
+    {
+        id: 'invoice-ledger-export-train',
+        name: '台账导出（火车票）',
+        desc: '本地批量识别铁路电子客票并导出 Excel 台账，支持自选导出列。',
+        category: ['invoice', 'wps'],
+        path: '/tools/invoice-ledger-export-train'
     },
     {
         id: 'image-convert',
@@ -175,9 +189,11 @@ export const tools = [
 ];
 
 export const featuredToolIds = [
-    'invoice-pdf-rename',
+    'invoice-pdf-rename-standard',
+    'invoice-pdf-rename-train',
     'invoice-pdf-dedup',
-    'invoice-ledger-export',
+    'invoice-ledger-export-standard',
+    'invoice-ledger-export-train',
     'getgzhtoutu',
     'webshot',
 ];

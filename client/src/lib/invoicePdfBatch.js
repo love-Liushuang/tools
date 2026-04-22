@@ -63,7 +63,8 @@ export async function parseInvoiceFileQueue(queue, options = {}) {
     onEngineLoading,
     onItemStart,
     onItemSuccess,
-    onItemError
+    onItemError,
+    forceReparse = false
   } = options;
 
   onEngineLoading?.();
@@ -75,7 +76,7 @@ export async function parseInvoiceFileQueue(queue, options = {}) {
 
   for (let index = 0; index < total; index += 1) {
     const current = queue[index];
-    let invoiceData = current.invoiceData;
+    let invoiceData = forceReparse ? null : current.invoiceData;
 
     onItemStart?.({ current, index, total });
 

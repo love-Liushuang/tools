@@ -73,6 +73,31 @@ function hasMixedInvoiceTypes(items) {
 
 const MIXED_INVOICE_TYPE_MESSAGE = '检测到普通发票和火车票混合上传，请分开操作。';
 
+function getInvoiceTypeLabel(invoiceTypeKey) {
+  return invoiceTypeKey === 'train' ? '火车票' : '普通发票';
+}
+
+function getInvoiceTypeToolLabel(invoiceTypeKey) {
+  return invoiceTypeKey === 'train' ? '火车票工具' : '普通发票工具';
+}
+
+function getInvoiceTypeMismatchMessage(expectedInvoiceTypeKey, recognizedTypes) {
+  if (!expectedInvoiceTypeKey || !recognizedTypes.length) {
+    return '';
+  }
+
+  if (recognizedTypes.length === 1 && recognizedTypes[0] === expectedInvoiceTypeKey) {
+    return '';
+  }
+
+  if (recognizedTypes.includes(expectedInvoiceTypeKey) && recognizedTypes.some((type) => type !== expectedInvoiceTypeKey)) {
+    return MIXED_INVOICE_TYPE_MESSAGE;
+  }
+
+  const targetType = recognizedTypes[0] === 'train' ? 'train' : 'standard';
+  return `当前工具仅支持${getInvoiceTypeLabel(expectedInvoiceTypeKey)}，请改用${getInvoiceTypeToolLabel(targetType)}。`;
+}
+
 function StepItem({ active, done, index, label }) {
   return (
     <div className={active ? 'invoice-step is-active' : done ? 'invoice-step is-done' : 'invoice-step'}>
@@ -82,7 +107,11 @@ function StepItem({ active, done, index, label }) {
   );
 }
 
-function InvoiceRenamePage() {
+function InvoiceRenamePage({
+  fixedInvoiceTypeKey = '',
+  toolTitle = 'PDF 电子发票批量重命名与金额汇总',
+  toolDesc = '本地完成 PDF 发票解析、金额汇总、批量重命名和 ZIP 打包下载。'
+}) {
   const inputRef = useRef(null);
   const toast = useToast();
   const [items, setItems] = useState([]);
@@ -122,8 +151,14 @@ function InvoiceRenamePage() {
   const isTrainMode = useMemo(() => shouldUseTrainAmountTable(items), [items]);
   const previewName = useMemo(() => {
     if (activeProfile) return buildRulePreview(activeProfile.invoiceTypeKey, activeProfile);
-    return buildRulePreview(ruleFields, separator);
-  }, [activeProfile, ruleFields, separator]);
+    return buildRulePreview(fixedInvoiceTypeKey || DEFAULT_INVOICE_TYPE, {
+      invoiceTypeKey: fixedInvoiceTypeKey || DEFAULT_INVOICE_TYPE,
+      separator,
+      showSequence: false,
+      showFieldLabel: false,
+      items: (ruleFields || DEFAULT_RULE_FIELDS).map((key) => ({ key, enabled: true, dateMode: 'year-month-day', customText: '' }))
+    });
+  }, [activeProfile, fixedInvoiceTypeKey, ruleFields, separator]);
   const amountSummary = useMemo(() => {
     const rows = items.map((item, index) => {
       const invoiceAmount = parseAmountNumber(getInvoiceAmountValue(item.invoiceData));
@@ -181,8 +216,8 @@ function InvoiceRenamePage() {
   }, [items]);
 
   useEffect(() => {
-    setActiveProfile(createDefaultRuleProfile(DEFAULT_INVOICE_TYPE));
-  }, []);
+    setActiveProfile(createDefaultRuleProfile(fixedInvoiceTypeKey || DEFAULT_INVOICE_TYPE));
+  }, [fixedInvoiceTypeKey]);
 
   const resetDownloadState = () => {
     setDownloadUrl('');
@@ -285,6 +320,7 @@ function InvoiceRenamePage() {
     const processingStatus = statusConfig.processingStatus || 'analyzing';
     const successStatus = statusConfig.successStatus || 'analyzed';
     const { results, successTotal, failureTotal } = await parseInvoiceFileQueue(queue, {
+      forceReparse: true,
       onEngineLoading() {
         setStatusText('正在加载 PDF 解析引擎...');
       },
@@ -352,7 +388,16 @@ function InvoiceRenamePage() {
         return;
       }
 
-      if (hasMixedInvoiceTypes(parsedResults)) {
+      const recognizedTypes = collectRecognizedInvoiceTypes(parsedResults);
+      const mismatchMessage = getInvoiceTypeMismatchMessage(fixedInvoiceTypeKey, recognizedTypes);
+      if (mismatchMessage) {
+        setError(mismatchMessage);
+        setStatusText('');
+        toast.error(mismatchMessage);
+        return;
+      }
+
+      if (!fixedInvoiceTypeKey && hasMixedInvoiceTypes(parsedResults)) {
         setError(MIXED_INVOICE_TYPE_MESSAGE);
         setStatusText('');
         toast.error(MIXED_INVOICE_TYPE_MESSAGE);
@@ -415,7 +460,16 @@ function InvoiceRenamePage() {
       });
       failureTotal = parseFailureTotal;
 
-      if (parsedResults.length > 0 && hasMixedInvoiceTypes(parsedResults)) {
+      const recognizedTypes = collectRecognizedInvoiceTypes(parsedResults);
+      const mismatchMessage = getInvoiceTypeMismatchMessage(fixedInvoiceTypeKey, recognizedTypes);
+      if (mismatchMessage) {
+        setError(mismatchMessage);
+        setStatusText('');
+        toast.error(mismatchMessage);
+        return;
+      }
+
+      if (!fixedInvoiceTypeKey && parsedResults.length > 0 && hasMixedInvoiceTypes(parsedResults)) {
         setError(MIXED_INVOICE_TYPE_MESSAGE);
         setStatusText('');
         toast.error(MIXED_INVOICE_TYPE_MESSAGE);
@@ -435,7 +489,7 @@ function InvoiceRenamePage() {
 
         try {
           const profileToUse = activeProfile || {
-            invoiceTypeKey: DEFAULT_INVOICE_TYPE,
+            invoiceTypeKey: fixedInvoiceTypeKey || DEFAULT_INVOICE_TYPE,
             separator,
             showSequence: false,
             showFieldLabel: false,
@@ -509,8 +563,8 @@ function InvoiceRenamePage() {
 
   return (
     <ToolPageShell
-      title="PDF 电子发票批量重命名与金额汇总"
-      desc="本地完成 PDF 发票解析、金额汇总、批量重命名和 ZIP 打包下载。"
+      title={toolTitle}
+      desc={toolDesc}
     >
       <div className="invoice-tool">
         <section className="invoice-hero">
@@ -960,6 +1014,7 @@ function InvoiceRenamePage() {
       {showRuleSettings && (
         <InvoiceRuleSettingsModal
           invoiceTypeKey={activeProfile?.invoiceTypeKey || DEFAULT_INVOICE_TYPE}
+          fixedInvoiceTypeKey={fixedInvoiceTypeKey}
           initialProfile={activeProfile}
           onSave={(normalized) => {
             setActiveProfile(normalized);

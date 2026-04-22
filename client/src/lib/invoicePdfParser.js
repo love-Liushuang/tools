@@ -206,7 +206,9 @@ function pickTextFromRect(lines, rect = {}, options = {}) {
 
 function detectTrainInvoice(lines, fullText) {
   const firstPageLines = getPageLines(lines, 1);
+  const compactFullText = compactText(fullText);
   const hasTrainServiceHint = /12306/.test(fullText) && /95306/.test(fullText);
+  const hasRailwayTicketTitle = /铁路电子客票|电子客票|仅供报销使用/.test(compactFullText);
   const hasTrainNumber = firstPageLines.some((line) => TRAIN_NO_RE.test(line.compact));
   const hasPassengerId = firstPageLines.some((line) => /\d{6,18}\*{2,}\d{2,4}/.test(line.compact));
   const hasTicketPrice = firstPageLines.some((line) => /\d+\.\d{2}/.test(line.compact));
@@ -214,7 +216,8 @@ function detectTrainInvoice(lines, fullText) {
     isLineInRect(line, { minX: 420, minY: 320 }) && /(?:19|20)\d{2}.*\d{1,2}.*\d{1,2}/.test(line.compact)
   ));
 
-  return (hasTrainServiceHint && hasTrainNumber && hasPassengerId)
+  return (hasRailwayTicketTitle && hasPassengerId && hasTicketPrice)
+    || (hasTrainServiceHint && hasTrainNumber && hasPassengerId)
     || (hasTrainNumber && hasPassengerId && hasTicketPrice && hasTopIssueDate);
 }
 

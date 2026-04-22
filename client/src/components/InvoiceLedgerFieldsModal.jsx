@@ -28,14 +28,15 @@ function buildOrderedFields(fields, selectedKeys) {
 
 function InvoiceLedgerFieldsModal({
   initialInvoiceTypeKey,
+  fixedInvoiceTypeKey,
   initialSelectionMap,
   onSave,
   onCancel
 }) {
-  const [localType, setLocalType] = useState(initialInvoiceTypeKey || DEFAULT_INVOICE_TYPE);
+  const [localType, setLocalType] = useState(fixedInvoiceTypeKey || initialInvoiceTypeKey || DEFAULT_INVOICE_TYPE);
   const [selectionMap, setSelectionMap] = useState(() => normalizeLedgerFieldSelectionMap(initialSelectionMap));
   const [orderedFields, setOrderedFields] = useState(() => {
-    const startType = initialInvoiceTypeKey || DEFAULT_INVOICE_TYPE;
+    const startType = fixedInvoiceTypeKey || initialInvoiceTypeKey || DEFAULT_INVOICE_TYPE;
     const selectedKeys = normalizeLedgerFieldSelection(initialSelectionMap?.[startType], startType);
     return buildOrderedFields(getInvoiceLedgerFieldOptions(startType), selectedKeys);
   });
@@ -50,7 +51,7 @@ function InvoiceLedgerFieldsModal({
   );
 
   useEffect(() => {
-    const nextType = initialInvoiceTypeKey || DEFAULT_INVOICE_TYPE;
+    const nextType = fixedInvoiceTypeKey || initialInvoiceTypeKey || DEFAULT_INVOICE_TYPE;
     const nextSelectionMap = normalizeLedgerFieldSelectionMap(initialSelectionMap);
     setLocalType(nextType);
     setSelectionMap(nextSelectionMap);
@@ -58,7 +59,7 @@ function InvoiceLedgerFieldsModal({
       getInvoiceLedgerFieldOptions(nextType),
       normalizeLedgerFieldSelection(nextSelectionMap[nextType], nextType)
     ));
-  }, [initialInvoiceTypeKey, initialSelectionMap]);
+  }, [fixedInvoiceTypeKey, initialInvoiceTypeKey, initialSelectionMap]);
 
   useEffect(() => {
     setOrderedFields(buildOrderedFields(allFields, selectedKeys));
@@ -115,27 +116,33 @@ function InvoiceLedgerFieldsModal({
         <div className="invoice-panel-head">
           <div>
             <h3>导出字段设置</h3>
-            <p style={{ marginTop: 8, color: '#58718a' }}>可按发票类型分别配置导出字段，并拖拽调整 Excel 列顺序。</p>
+            <p style={{ marginTop: 8, color: '#58718a' }}>
+              {fixedInvoiceTypeKey ? '可配置当前工具对应发票类型的导出字段，并拖拽调整 Excel 列顺序。' : '可按发票类型分别配置导出字段，并拖拽调整 Excel 列顺序。'}
+            </p>
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 8, flexWrap: 'wrap' }}>
-          <label className="invoice-separator-field" style={{ display: 'flex', gap: 8, alignItems: 'center', fontWeight: 700 }}>
-            <span>发票类型</span>
-            <select value={localType} onChange={(event) => setLocalType(event.target.value)}>
-              {INVOICE_TYPES.map((type) => (
-                <option key={type.key} value={type.key}>{type.label}</option>
-              ))}
-            </select>
-          </label>
-        </div>
+        {!fixedInvoiceTypeKey ? (
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 8, flexWrap: 'wrap' }}>
+            <label className="invoice-separator-field" style={{ display: 'flex', gap: 8, alignItems: 'center', fontWeight: 700 }}>
+              <span>发票类型</span>
+              <select value={localType} onChange={(event) => setLocalType(event.target.value)}>
+                {INVOICE_TYPES.map((type) => (
+                  <option key={type.key} value={type.key}>{type.label}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+        ) : null}
 
         <div className="invoice-preview-box" style={{ marginTop: 8 }}>
           <span>当前已选</span>
           <strong>{selectedKeys.length} 列</strong>
         </div>
 
-        <div style={{ marginTop: 8, color: '#6b829a', fontSize: 13 }}>提示：当前仅展示所选发票类型可导出的字段，勾选后才会导出，已选字段支持拖拽排序。</div>
+        <div style={{ marginTop: 8, color: '#6b829a', fontSize: 13 }}>
+          {fixedInvoiceTypeKey ? '提示：当前仅展示本工具对应发票类型可导出的字段，勾选后才会导出，已选字段支持拖拽排序。' : '提示：当前仅展示所选发票类型可导出的字段，勾选后才会导出，已选字段支持拖拽排序。'}
+        </div>
         <div className="invoice-rule-list" style={{ marginTop: 8, overflow: 'auto' }}>
           {orderedFields.map((field, index) => {
             const checked = selectedKeys.includes(field.key);
