@@ -201,69 +201,213 @@ function applyAdjustments(pixels, brightness, contrast, saturation) {
   return next;
 }
 
-function getCornerReferenceColors(pixels, width, height) {
-  const sampleSize = Math.max(4, Math.min(12, Math.floor(Math.min(width, height) * 0.05)));
-  const samples = [
-    [0, 0],
-    [Math.max(0, width - sampleSize), 0],
-    [0, Math.max(0, height - sampleSize)],
-    [Math.max(0, width - sampleSize), Math.max(0, height - sampleSize)]
-  ];
-
-  return samples.map(([startX, startY]) => {
-    let red = 0;
-    let green = 0;
-    let blue = 0;
-    let count = 0;
-    for (let y = startY; y < Math.min(height, startY + sampleSize); y += 1) {
-      for (let x = startX; x < Math.min(width, startX + sampleSize); x += 1) {
-        const index = (y * width + x) * 4;
-        const alpha = pixels[index + 3];
-        if (alpha < 12) {
-          continue;
-        }
-        red += pixels[index];
-        green += pixels[index + 1];
-        blue += pixels[index + 2];
-        count += 1;
-      }
-    }
-    return count
-      ? [Math.round(red / count), Math.round(green / count), Math.round(blue / count)]
-      : null;
-  }).filter(Boolean);
+function rgbDistance(left, right) {
+  return Math.sqrt(
+    (left[0] - right[0]) ** 2
+    + (left[1] - right[1]) ** 2
+    + (left[2] - right[2]) ** 2
+  );
 }
 
-function colorDistance(rgb, references) {
-  let best = Infinity;
-  for (const reference of references) {
-    const distance = Math.sqrt(
-      (rgb[0] - reference[0]) ** 2
-      + (rgb[1] - reference[1]) ** 2
-      + (rgb[2] - reference[2]) ** 2
-    );
-    if (distance < best) {
-      best = distance;
+function collectBorderSamples(pixels, width, height) {
+  const borderDepth = Math.max(1, Math.min(6, Math.floor(Math.min(width, height) * 0.03)));
+  const step = Math.max(1, Math.floor(Math.max(width, height) / 240));
+  const samples = [];
+
+  const pushSample = (x, y) => {
+    const index = (y * width + x) * 4;
+    if (pixels[index + 3] < 12) {
+      return;
+    }
+    samples.push([pixels[index], pixels[index + 1], pixels[index + 2]]);
+  };
+
+  for (let depth = 0; depth < borderDepth; depth += 1) {
+    for (let x = 0; x < width; x += step) {
+      pushSample(x, depth);
+      pushSample(x, height - 1 - depth);
+    }
+    for (let y = 0; y < height; y += step) {
+      pushSample(depth, y);
+      pushSample(width - 1 - depth, y);
     }
   }
-  return best;
+
+  return samples;
 }
 
-function removeBackground(pixels, width, height) {
-  const references = getCornerReferenceColors(pixels, width, height);
+function clusterBorderSamples(samples) {
+  const clusters = [];
+
+  samples.forEach((rgb) => {
+    let bestCluster = null;
+    let bestDistance = 26;
+    for (const cluster of clusters) {
+      const distance = rgbDistance(rgb, cluster.rgb);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestCluster = cluster;
+      }
+    }
+
+    if (!bestCluster) {
+      clusters.push({
+        count: 1,
+        sumRed: rgb[0],
+        sumGreen: rgb[1],
+        sumBlue: rgb[2],
+        rgb: rgb.slice(),
+        maxDistance: 0
+      });
+      return;
+    }
+
+    bestCluster.count += 1;
+    bestCluster.sumRed += rgb[0];
+    bestCluster.sumGreen += rgb[1];
+    bestCluster.sumBlue += rgb[2];
+    bestCluster.rgb = [
+      Math.round(bestCluster.sumRed / bestCluster.count),
+      Math.round(bestCluster.sumGreen / bestCluster.count),
+      Math.round(bestCluster.sumBlue / bestCluster.count)
+    ];
+    if (bestDistance > bestCluster.maxDistance) {
+      bestCluster.maxDistance = bestDistance;
+    }
+  });
+
+  return clusters;
+}
+
+function getBackgroundReferences(pixels, width, height) {
+  const samples = collectBorderSamples(pixels, width, height);
+  if (!samples.length) {
+    return [];
+  }
+
+  const clusters = clusterBorderSamples(samples).sort((left, right) => right.count - left.count);
+  const minCount = Math.max(4, Math.round(samples.length * 0.04));
+  const references = [];
+  let covered = 0;
+
+  for (const cluster of clusters) {
+    if (cluster.count < minCount && covered >= 0.65) {
+      break;
+    }
+    references.push({
+      rgb: cluster.rgb,
+      threshold: Math.min(58, Math.max(24, cluster.maxDistance + 18))
+    });
+    covered += cluster.count / samples.length;
+    if (covered >= 0.88 || references.length >= 4) {
+      break;
+    }
+  }
+
+  return references;
+}
+
+function matchesBackgroundReference(rgb, references) {
+  for (const reference of references) {
+    if (rgbDistance(rgb, reference.rgb) <= reference.threshold) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function findOpaqueBounds(pixels, width, height) {
+  let minX = width;
+  let minY = height;
+  let maxX = -1;
+  let maxY = -1;
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const alpha = pixels[(y * width + x) * 4 + 3];
+      if (alpha < 12) {
+        continue;
+      }
+      if (x < minX) {
+        minX = x;
+      }
+      if (y < minY) {
+        minY = y;
+      }
+      if (x > maxX) {
+        maxX = x;
+      }
+      if (y > maxY) {
+        maxY = y;
+      }
+    }
+  }
+
+  if (maxX < 0 || maxY < 0) {
+    return null;
+  }
+
+  return {
+    minX,
+    minY,
+    maxX,
+    maxY,
+    width: maxX - minX + 1,
+    height: maxY - minY + 1
+  };
+}
+
+function cropPixelsToBounds(pixels, width, height, bounds) {
+  if (
+    !bounds
+    || (
+      bounds.minX === 0
+      && bounds.minY === 0
+      && bounds.width === width
+      && bounds.height === height
+    )
+  ) {
+    return {
+      pixels,
+      width,
+      height
+    };
+  }
+
+  const next = new Uint8ClampedArray(bounds.width * bounds.height * 4);
+  for (let y = 0; y < bounds.height; y += 1) {
+    const sourceStart = ((bounds.minY + y) * width + bounds.minX) * 4;
+    const sourceEnd = sourceStart + bounds.width * 4;
+    next.set(pixels.subarray(sourceStart, sourceEnd), y * bounds.width * 4);
+  }
+
+  return {
+    pixels: next,
+    width: bounds.width,
+    height: bounds.height
+  };
+}
+
+function extractSubjectPixels(pixels, width, height) {
+  const references = getBackgroundReferences(pixels, width, height);
   if (!references.length) {
-    return pixels;
+    return {
+      pixels,
+      width,
+      height
+    };
   }
 
   const next = new Uint8ClampedArray(pixels);
   const visited = new Uint8Array(width * height);
-  const queue = [
-    [0, 0],
-    [width - 1, 0],
-    [0, height - 1],
-    [width - 1, height - 1]
-  ];
-  const threshold = 38;
+  const queue = [];
+
+  for (let x = 0; x < width; x += 1) {
+    queue.push([x, 0], [x, height - 1]);
+  }
+  for (let y = 1; y < height - 1; y += 1) {
+    queue.push([0, y], [width - 1, y]);
+  }
 
   while (queue.length) {
     const [x, y] = queue.pop();
@@ -278,12 +422,9 @@ function removeBackground(pixels, width, height) {
 
     const index = flatIndex * 4;
     const alpha = next[index + 3];
-    if (alpha < 12) {
-      continue;
-    }
-
+    const isTransparent = alpha < 12;
     const rgb = [next[index], next[index + 1], next[index + 2]];
-    if (colorDistance(rgb, references) > threshold) {
+    if (!isTransparent && !matchesBackgroundReference(rgb, references)) {
       continue;
     }
 
@@ -294,7 +435,16 @@ function removeBackground(pixels, width, height) {
     queue.push([x, y - 1]);
   }
 
-  return next;
+  const bounds = findOpaqueBounds(next, width, height);
+  if (!bounds) {
+    return {
+      pixels,
+      width,
+      height
+    };
+  }
+
+  return cropPixelsToBounds(next, width, height, bounds);
 }
 
 function matteToWhite(red, green, blue, alpha) {
@@ -514,6 +664,76 @@ function buildResult(codes, width, height, brandKey, colorCounts) {
   };
 }
 
+function findCodeBounds(codes, width, height) {
+  let minX = width;
+  let minY = height;
+  let maxX = -1;
+  let maxY = -1;
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      if (!codes[y * width + x]) {
+        continue;
+      }
+      if (x < minX) {
+        minX = x;
+      }
+      if (y < minY) {
+        minY = y;
+      }
+      if (x > maxX) {
+        maxX = x;
+      }
+      if (y > maxY) {
+        maxY = y;
+      }
+    }
+  }
+
+  if (maxX < 0 || maxY < 0) {
+    return null;
+  }
+
+  return {
+    minX,
+    minY,
+    width: maxX - minX + 1,
+    height: maxY - minY + 1
+  };
+}
+
+function trimPatternCodes(codes, width, height) {
+  const bounds = findCodeBounds(codes, width, height);
+  if (
+    !bounds
+    || (
+      bounds.minX === 0
+      && bounds.minY === 0
+      && bounds.width === width
+      && bounds.height === height
+    )
+  ) {
+    return {
+      codes,
+      width,
+      height
+    };
+  }
+
+  const nextCodes = new Array(bounds.width * bounds.height).fill(null);
+  for (let y = 0; y < bounds.height; y += 1) {
+    for (let x = 0; x < bounds.width; x += 1) {
+      nextCodes[y * bounds.width + x] = codes[(bounds.minY + y) * width + bounds.minX + x];
+    }
+  }
+
+  return {
+    codes: nextCodes,
+    width: bounds.width,
+    height: bounds.height
+  };
+}
+
 function convertPattern(jobId, payload) {
   const {
     pixels,
@@ -524,11 +744,16 @@ function convertPattern(jobId, payload) {
 
   const palette = getPreparedPalette(options.brandKey);
   let workingPixels = new Uint8ClampedArray(pixels);
+  let workingWidth = sourceWidth;
+  let workingHeight = sourceHeight;
   postProgress(jobId, 0.08, '读取图片中…');
 
   if (options.removeBackground) {
-    workingPixels = removeBackground(workingPixels, sourceWidth, sourceHeight);
-    postProgress(jobId, 0.18, '已执行背景去除');
+    const extracted = extractSubjectPixels(workingPixels, workingWidth, workingHeight);
+    workingPixels = extracted.pixels;
+    workingWidth = extracted.width;
+    workingHeight = extracted.height;
+    postProgress(jobId, 0.18, '已识别主体并裁切画布');
   }
 
   workingPixels = applyAdjustments(
@@ -540,7 +765,7 @@ function convertPattern(jobId, payload) {
   postProgress(jobId, 0.28, '已完成图像调整');
 
   const gridWidth = Math.max(10, Math.min(200, Math.round(options.gridWidth || 64)));
-  const gridHeight = Math.max(1, Math.round((sourceHeight / sourceWidth) * gridWidth));
+  const gridHeight = Math.max(1, Math.round((workingHeight / workingWidth) * gridWidth));
   const totalCells = gridWidth * gridHeight;
   const representativeColors = new Array(totalCells).fill(null);
   const uniqueSamples = new Map();
@@ -549,8 +774,8 @@ function convertPattern(jobId, payload) {
     for (let x = 0; x < gridWidth; x += 1) {
       const color = sampleCellRepresentative(
         workingPixels,
-        sourceWidth,
-        sourceHeight,
+        workingWidth,
+        workingHeight,
         gridWidth,
         gridHeight,
         x,
@@ -587,12 +812,19 @@ function convertPattern(jobId, payload) {
   postProgress(jobId, 0.72, '正在匹配色卡…');
 
   const reduced = reduceColors(codes, palette, colorCounts, options.maxColors || 0);
+  const trimmed = options.removeBackground
+    ? trimPatternCodes(reduced.codes, gridWidth, gridHeight)
+    : {
+      codes: reduced.codes,
+      width: gridWidth,
+      height: gridHeight
+    };
   postProgress(jobId, 0.88, '正在整理结果…');
 
   return buildResult(
-    reduced.codes,
-    gridWidth,
-    gridHeight,
+    trimmed.codes,
+    trimmed.width,
+    trimmed.height,
     palette.key,
     reduced.colorCounts
   );

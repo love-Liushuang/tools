@@ -151,6 +151,25 @@ export function detectBackgroundCode(codes, width, height) {
   return bestCode;
 }
 
+function summarizePatternCodes(codes, palette) {
+  const colorCounts = {};
+  let totalBeads = 0;
+
+  codes.forEach((code) => {
+    if (!code || !palette.colorMap.has(code)) {
+      return;
+    }
+    colorCounts[code] = (colorCounts[code] || 0) + 1;
+    totalBeads += 1;
+  });
+
+  return {
+    colorCounts,
+    totalBeads,
+    uniqueColors: Object.keys(colorCounts).length
+  };
+}
+
 export function buildPatternModel({
   codes,
   width,
@@ -160,20 +179,11 @@ export function buildPatternModel({
   historyId = null,
   createdAt = null,
   updatedAt = null,
-  bgCode = null
+  bgCode = undefined
 }) {
   const palette = getPreparedPalette(brandKey);
   const safeCodes = cloneCodes(codes);
-  const colorCounts = {};
-  let totalBeads = 0;
-
-  safeCodes.forEach((code) => {
-    if (!code || !palette.colorMap.has(code)) {
-      return;
-    }
-    colorCounts[code] = (colorCounts[code] || 0) + 1;
-    totalBeads += 1;
-  });
+  const summary = summarizePatternCodes(safeCodes, palette);
 
   return {
     historyId: historyId || createPatternId(),
@@ -184,10 +194,143 @@ export function buildPatternModel({
     codes: safeCodes,
     createdAt: createdAt || Date.now(),
     updatedAt: updatedAt || Date.now(),
-    colorCounts,
-    totalBeads,
-    uniqueColors: Object.keys(colorCounts).length,
-    bgCode: bgCode || detectBackgroundCode(safeCodes, width, height)
+    colorCounts: summary.colorCounts,
+    totalBeads: summary.totalBeads,
+    uniqueColors: summary.uniqueColors,
+    bgCode: bgCode === undefined ? detectBackgroundCode(safeCodes, width, height) : bgCode
+  };
+}
+
+export function getPatternContentBounds(pattern, options = {}) {
+  if (!pattern || !Array.isArray(pattern.codes) || !pattern.width || !pattern.height) {
+    return null;
+  }
+
+  const { hideBackground = false } = options;
+  const shouldSkipBackground = hideBackground && pattern.bgCode;
+  let minX = pattern.width;
+  let minY = pattern.height;
+  let maxX = -1;
+  let maxY = -1;
+
+  for (let y = 0; y < pattern.height; y += 1) {
+    for (let x = 0; x < pattern.width; x += 1) {
+      const code = pattern.codes[y * pattern.width + x];
+      if (!code) {
+        continue;
+      }
+      if (shouldSkipBackground && code === pattern.bgCode) {
+        continue;
+      }
+      if (x < minX) {
+        minX = x;
+      }
+      if (y < minY) {
+        minY = y;
+      }
+      if (x > maxX) {
+        maxX = x;
+      }
+      if (y > maxY) {
+        maxY = y;
+      }
+    }
+  }
+
+  if (maxX < 0 || maxY < 0) {
+    if (shouldSkipBackground) {
+      return getPatternContentBounds(pattern, { hideBackground: false });
+    }
+    return {
+      minX: 0,
+      minY: 0,
+      maxX: pattern.width - 1,
+      maxY: pattern.height - 1,
+      width: pattern.width,
+      height: pattern.height
+    };
+  }
+
+  return {
+    minX,
+    minY,
+    maxX,
+    maxY,
+    width: maxX - minX + 1,
+    height: maxY - minY + 1
+  };
+}
+
+export function createFocusedPattern(pattern, options = {}) {
+  if (!pattern) {
+    return {
+      pattern: null,
+      offsetX: 0,
+      offsetY: 0,
+      bounds: null
+    };
+  }
+
+  const { focusSubject = false, hideBackground = false } = options;
+  const bounds = focusSubject
+    ? (getPatternContentBounds(pattern, { hideBackground }) || {
+      minX: 0,
+      minY: 0,
+      maxX: pattern.width - 1,
+      maxY: pattern.height - 1,
+      width: pattern.width,
+      height: pattern.height
+    })
+    : {
+      minX: 0,
+      minY: 0,
+      maxX: pattern.width - 1,
+      maxY: pattern.height - 1,
+      width: pattern.width,
+      height: pattern.height
+    };
+  const shouldHideBackground = hideBackground && pattern.bgCode;
+  const isFullFrame = (
+    bounds.minX === 0
+    && bounds.minY === 0
+    && bounds.width === pattern.width
+    && bounds.height === pattern.height
+  );
+
+  if (isFullFrame && !shouldHideBackground) {
+    return {
+      pattern,
+      offsetX: 0,
+      offsetY: 0,
+      bounds
+    };
+  }
+
+  const nextCodes = new Array(bounds.width * bounds.height).fill(null);
+  for (let y = 0; y < bounds.height; y += 1) {
+    for (let x = 0; x < bounds.width; x += 1) {
+      const sourceCode = pattern.codes[(bounds.minY + y) * pattern.width + (bounds.minX + x)] || null;
+      nextCodes[y * bounds.width + x] = shouldHideBackground && sourceCode === pattern.bgCode ? null : sourceCode;
+    }
+  }
+
+  const palette = getPreparedPalette(pattern.brandKey);
+  const summary = summarizePatternCodes(nextCodes, palette);
+
+  return {
+    pattern: {
+      ...pattern,
+      width: bounds.width,
+      height: bounds.height,
+      codes: nextCodes,
+      colorCounts: summary.colorCounts,
+      totalBeads: summary.totalBeads,
+      uniqueColors: summary.uniqueColors,
+      bgCode: shouldHideBackground ? null : pattern.bgCode
+    },
+    offsetX: bounds.minX,
+    offsetY: bounds.minY,
+    bounds
   };
 }
 
@@ -384,18 +527,23 @@ function chooseOverviewCellSize(pattern) {
 }
 
 export function createPatternOverviewCanvas(pattern, options = {}) {
-  const palette = getPreparedPalette(pattern.brandKey);
-  const materials = sortMaterialList(pattern);
-  const title = options.title || pattern.name || '拼豆图纸';
-  const cellSize = options.cellSize || chooseOverviewCellSize(pattern);
+  const focused = createFocusedPattern(pattern, {
+    focusSubject: Boolean(options.hideBackground),
+    hideBackground: Boolean(options.hideBackground)
+  });
+  const renderPattern = focused.pattern || pattern;
+  const palette = getPreparedPalette(renderPattern.brandKey);
+  const materials = sortMaterialList(renderPattern);
+  const title = options.title || renderPattern.name || '拼豆图纸';
+  const cellSize = options.cellSize || chooseOverviewCellSize(renderPattern);
   const axis = 34;
   const headerHeight = 66;
   const legendItemWidth = 156;
-  const legendCols = Math.max(1, Math.min(4, Math.floor((pattern.width * cellSize) / legendItemWidth) || 1));
+  const legendCols = Math.max(1, Math.min(4, Math.floor((renderPattern.width * cellSize) / legendItemWidth) || 1));
   const legendRows = Math.ceil(materials.length / legendCols);
   const legendHeight = materials.length ? 24 + legendRows * 30 : 0;
-  const patternWidth = pattern.width * cellSize;
-  const patternHeight = pattern.height * cellSize;
+  const patternWidth = renderPattern.width * cellSize;
+  const patternHeight = renderPattern.height * cellSize;
   const canvasWidth = Math.max(patternWidth + axis * 2 + 24, legendCols * legendItemWidth + 32);
   const canvasHeight = headerHeight + axis + patternHeight + axis + legendHeight + 28;
   const canvas = document.createElement('canvas');
@@ -413,7 +561,7 @@ export function createPatternOverviewCanvas(pattern, options = {}) {
   ctx.font = '500 13px sans-serif';
   ctx.fillStyle = '#4f657a';
   ctx.fillText(
-    `${pattern.width} × ${pattern.height} · ${pattern.uniqueColors} 色 · ${pattern.totalBeads} 颗 · ${palette.name}`,
+    `${renderPattern.width} × ${renderPattern.height} · ${renderPattern.uniqueColors} 色 · ${renderPattern.totalBeads} 颗 · ${palette.name}`,
     16,
     46
   );
@@ -422,16 +570,16 @@ export function createPatternOverviewCanvas(pattern, options = {}) {
   const offsetY = headerHeight;
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(offsetX, offsetY, patternWidth, patternHeight);
-  drawPatternToContext(ctx, pattern, {
+  drawPatternToContext(ctx, renderPattern, {
     offsetX,
     offsetY,
     cellSize,
     showCodes: options.showCodes,
     showGrid: options.showGrid,
     showBoardLines: options.showBoardLines,
-    hideBackground: options.hideBackground
+    hideBackground: false
   });
-  drawAxisLabels(ctx, pattern, offsetX, offsetY, cellSize);
+  drawAxisLabels(ctx, renderPattern, offsetX, offsetY, cellSize);
 
   if (materials.length) {
     const legendTop = offsetY + patternHeight + axis;
@@ -464,10 +612,15 @@ export function createPatternOverviewCanvas(pattern, options = {}) {
 }
 
 export function createBoardCanvas(pattern, startX, startY, options = {}) {
-  const palette = getPreparedPalette(pattern.brandKey);
+  const focused = createFocusedPattern(pattern, {
+    focusSubject: Boolean(options.hideBackground),
+    hideBackground: Boolean(options.hideBackground)
+  });
+  const renderPattern = focused.pattern || pattern;
+  const palette = getPreparedPalette(renderPattern.brandKey);
   const boardSize = options.boardSize || palette.boardSize || DEFAULT_BOARD_SIZE;
-  const width = Math.max(0, Math.min(boardSize, pattern.width - startX));
-  const height = Math.max(0, Math.min(boardSize, pattern.height - startY));
+  const width = Math.max(0, Math.min(boardSize, renderPattern.width - startX));
+  const height = Math.max(0, Math.min(boardSize, renderPattern.height - startY));
   const cellSize = options.cellSize || 22;
   const axis = 30;
   const canvas = document.createElement('canvas');
@@ -481,15 +634,15 @@ export function createBoardCanvas(pattern, startX, startY, options = {}) {
   ctx.fillRect(axis, axis, width * cellSize, height * cellSize);
 
   const subPattern = {
-    ...pattern,
+    ...renderPattern,
     width,
     height,
     codes: Array.from({ length: width * height }, (_, index) => {
       const x = index % width;
       const y = Math.floor(index / width);
-      return pattern.codes[(startY + y) * pattern.width + (startX + x)];
+      return renderPattern.codes[(startY + y) * renderPattern.width + (startX + x)];
     }),
-    bgCode: pattern.bgCode
+    bgCode: renderPattern.bgCode
   };
 
   drawPatternToContext(ctx, subPattern, {
@@ -499,7 +652,7 @@ export function createBoardCanvas(pattern, startX, startY, options = {}) {
     showCodes: options.showCodes !== false,
     showGrid: true,
     showBoardLines: false,
-    hideBackground: options.hideBackground
+    hideBackground: false
   });
   drawAxisLabels(ctx, subPattern, axis, axis, cellSize);
 
@@ -511,25 +664,30 @@ export function createPatternThumbnailDataUrl(pattern, options = {}) {
     return '';
   }
 
+  const focused = createFocusedPattern(pattern, {
+    focusSubject: Boolean(options.hideBackground),
+    hideBackground: Boolean(options.hideBackground)
+  });
+  const renderPattern = focused.pattern || pattern;
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   const size = 140;
   const cellSize = Math.max(
     2,
-    Math.floor((size - 16) / Math.max(pattern.width, pattern.height))
+    Math.floor((size - 16) / Math.max(renderPattern.width, renderPattern.height))
   );
-  canvas.width = pattern.width * cellSize + 16;
-  canvas.height = pattern.height * cellSize + 16;
+  canvas.width = renderPattern.width * cellSize + 16;
+  canvas.height = renderPattern.height * cellSize + 16;
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  drawPatternToContext(ctx, pattern, {
+  drawPatternToContext(ctx, renderPattern, {
     offsetX: 8,
     offsetY: 8,
     cellSize,
     showCodes: false,
     showGrid: false,
     showBoardLines: false,
-    hideBackground: options.hideBackground
+    hideBackground: false
   });
   return canvas.toDataURL('image/png', 0.82);
 }

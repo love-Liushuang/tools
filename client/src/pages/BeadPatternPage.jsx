@@ -9,6 +9,7 @@ import {
   buildPatternModel,
   clampNumber,
   createBoardCanvas,
+  createFocusedPattern,
   createPatternOverviewCanvas,
   createPatternThumbnailDataUrl,
   downloadCanvas,
@@ -131,6 +132,35 @@ function getCellFromPointer(event, canvas, pattern, cellSize) {
   };
 }
 
+function getFocusedPatternView(pattern, focusSubject) {
+  return createFocusedPattern(pattern, {
+    focusSubject,
+    hideBackground: focusSubject
+  });
+}
+
+function getPatternCellFromPointer(event, canvas, pattern, cellSize, focusSubject) {
+  if (!pattern) {
+    return null;
+  }
+
+  const focused = getFocusedPatternView(pattern, focusSubject);
+  const viewPattern = focused.pattern;
+  const cell = getCellFromPointer(event, canvas, viewPattern, cellSize);
+  if (!cell) {
+    return null;
+  }
+
+  const sourceX = cell.x + focused.offsetX;
+  const sourceY = cell.y + focused.offsetY;
+  return {
+    ...cell,
+    sourceX,
+    sourceY,
+    index: sourceY * pattern.width + sourceX
+  };
+}
+
 function addPdfPage(doc, canvas) {
   const orientation = canvas.width >= canvas.height ? 'landscape' : 'portrait';
   doc.addPage([canvas.width, canvas.height], orientation);
@@ -183,7 +213,16 @@ function BeadPatternPage() {
     [pattern?.brandKey, brandKey]
   );
   const generationPalette = useMemo(() => getPreparedPalette(brandKey), [brandKey]);
-  const materials = useMemo(() => sortMaterialList(pattern), [pattern]);
+  const focusedPatternView = useMemo(
+    () => getFocusedPatternView(pattern, hideBackground),
+    [pattern, hideBackground]
+  );
+  const displayPattern = focusedPatternView.pattern;
+  const statsPattern = hideBackground ? displayPattern : pattern;
+  const materials = useMemo(
+    () => sortMaterialList(statsPattern),
+    [statsPattern]
+  );
 
   useEffect(() => {
     patternRef.current = pattern;
@@ -224,7 +263,8 @@ function BeadPatternPage() {
           width: result.width,
           height: result.height,
           brandKey: result.brandKey,
-          name: activeJob.name
+          name: activeJob.name,
+          bgCode: result.bgCode
         });
         setPattern(nextPattern);
         setPatternName(nextPattern.name);
@@ -279,23 +319,23 @@ function BeadPatternPage() {
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !pattern) {
+    if (!canvas || !displayPattern) {
       return;
     }
     const cellSize = Math.max(8, zoom);
-    canvas.width = pattern.width * cellSize;
-    canvas.height = pattern.height * cellSize;
+    canvas.width = displayPattern.width * cellSize;
+    canvas.height = displayPattern.height * cellSize;
     const ctx = canvas.getContext('2d');
     if (!ctx) {
       return;
     }
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    drawCanvasPattern(ctx, pattern, cellSize, {
+    drawCanvasPattern(ctx, displayPattern, cellSize, {
       showCodes,
       showGrid,
       showBoardLines,
-      hideBackground
+      hideBackground: false
     });
 
     if (hoverCell) {
@@ -310,7 +350,7 @@ function BeadPatternPage() {
       );
       ctx.restore();
     }
-  }, [pattern, zoom, showCodes, showGrid, showBoardLines, hideBackground, hoverCell]);
+  }, [displayPattern, zoom, showCodes, showGrid, showBoardLines, hoverCell]);
 
   const hoverInfo = useMemo(() => {
     if (!pattern || !hoverCell) {
@@ -324,6 +364,10 @@ function BeadPatternPage() {
       color
     };
   }, [currentPalette.colorMap, hoverCell, pattern]);
+
+  useEffect(() => {
+    setHoverCell(null);
+  }, [hideBackground]);
 
   const selectedColor = selectedCode ? currentPalette.colorMap.get(selectedCode) : null;
 
@@ -523,7 +567,7 @@ function BeadPatternPage() {
     if (!current || !canvas) {
       return;
     }
-    const cell = getCellFromPointer(event, canvas, current, zoom);
+    const cell = getPatternCellFromPointer(event, canvas, current, zoom, hideBackground);
     if (!cell) {
       return;
     }
@@ -575,7 +619,7 @@ function BeadPatternPage() {
     if (!current || !canvas) {
       return;
     }
-    const cell = getCellFromPointer(event, canvas, current, zoom);
+    const cell = getPatternCellFromPointer(event, canvas, current, zoom, hideBackground);
     setHoverCell(cell);
     if (!cell || !strokeRef.current.active) {
       return;
@@ -609,16 +653,18 @@ function BeadPatternPage() {
   };
 
   const handleExportPng = () => {
-    if (!patternRef.current) {
+    const current = patternRef.current;
+    if (!current) {
       return;
     }
-    const canvas = createPatternOverviewCanvas(patternRef.current, {
+    const exportPattern = getFocusedPatternView(current, hideBackground).pattern || current;
+    const canvas = createPatternOverviewCanvas(exportPattern, {
       showCodes,
       showGrid,
       showBoardLines,
-      hideBackground
+      hideBackground: false
     });
-    downloadCanvas(canvas, `${makePatternFileStem(patternRef.current, source)}.png`);
+    downloadCanvas(canvas, `${makePatternFileStem(current, source)}.png`);
     toast.success('PNG 已导出。');
   };
 
@@ -627,12 +673,13 @@ function BeadPatternPage() {
     if (!current) {
       return;
     }
+    const exportPattern = getFocusedPatternView(current, hideBackground).pattern || current;
 
-    const overviewCanvas = createPatternOverviewCanvas(current, {
+    const overviewCanvas = createPatternOverviewCanvas(exportPattern, {
       showCodes,
       showGrid,
       showBoardLines,
-      hideBackground
+      hideBackground: false
     });
     const overviewOrientation = overviewCanvas.width >= overviewCanvas.height ? 'landscape' : 'portrait';
     const doc = new jsPDF({
@@ -644,12 +691,12 @@ function BeadPatternPage() {
 
     doc.addImage(overviewCanvas, 'PNG', 0, 0, overviewCanvas.width, overviewCanvas.height, undefined, 'FAST');
 
-    const boardSize = currentPalette.boardSize || 29;
-    for (let startY = 0; startY < current.height; startY += boardSize) {
-      for (let startX = 0; startX < current.width; startX += boardSize) {
-        const boardCanvas = createBoardCanvas(current, startX, startY, {
+    const boardSize = getPreparedPalette(exportPattern.brandKey).boardSize || 29;
+    for (let startY = 0; startY < exportPattern.height; startY += boardSize) {
+      for (let startX = 0; startX < exportPattern.width; startX += boardSize) {
+        const boardCanvas = createBoardCanvas(exportPattern, startX, startY, {
           showCodes: true,
-          hideBackground
+          hideBackground: false
         });
         addPdfPage(doc, boardCanvas);
       }
@@ -835,7 +882,7 @@ function BeadPatternPage() {
                 onChange={(event) => setRemoveBackground(event.target.checked)}
                 type="checkbox"
               />
-              <span>尝试去除四角背景色</span>
+              <span>只保留主体（自动去背景并裁切）</span>
             </label>
           </div>
 
@@ -883,17 +930,17 @@ function BeadPatternPage() {
               </article>
               <article className="bead-stat-card">
                 <span>当前图纸</span>
-                <strong>{pattern ? `${pattern.width} × ${pattern.height}` : '-'}</strong>
-                <small>自动按原图比例缩放高度</small>
+                <strong>{statsPattern ? `${statsPattern.width} × ${statsPattern.height}` : '-'}</strong>
+                <small>{hideBackground ? '当前按主体区域显示尺寸' : '自动按原图比例缩放高度'}</small>
               </article>
               <article className="bead-stat-card">
                 <span>总颗数</span>
-                <strong>{pattern ? pattern.totalBeads : '-'}</strong>
-                <small>隐藏背景不影响统计</small>
+                <strong>{statsPattern ? statsPattern.totalBeads : '-'}</strong>
+                <small>{hideBackground ? '已按主体区域排除背景' : '主体裁切后会自动更新'}</small>
               </article>
               <article className="bead-stat-card">
                 <span>使用颜色</span>
-                <strong>{pattern ? pattern.uniqueColors : '-'}</strong>
+                <strong>{statsPattern ? statsPattern.uniqueColors : '-'}</strong>
                 <small>支持手动编辑继续微调</small>
               </article>
             </div>
@@ -950,7 +997,7 @@ function BeadPatternPage() {
                   onChange={(event) => setHideBackground(event.target.checked)}
                   type="checkbox"
                 />
-                <span>预览隐藏背景色</span>
+                <span>仅显示主体（预览/导出）</span>
               </label>
               <label className="bead-field bead-zoom-field">
                 <span>缩放 {zoom}px</span>
@@ -989,7 +1036,7 @@ function BeadPatternPage() {
             <div className="bead-hover-meta">
               {hoverInfo ? (
                 <span>
-                  X {hoverInfo.x + 1} · Y {hoverInfo.y + 1}
+                  X {hoverInfo.sourceX + 1} · Y {hoverInfo.sourceY + 1}
                   {hoverInfo.code ? ` · ${hoverInfo.code} ${hoverInfo.color?.name || ''}` : ' · 空白'}
                 </span>
               ) : (
@@ -1010,7 +1057,7 @@ function BeadPatternPage() {
 
               <div className="bead-palette-grid">
                 {currentPalette.colors.map((color) => {
-                  const count = pattern?.colorCounts?.[color.code] || 0;
+                  const count = statsPattern?.colorCounts?.[color.code] || 0;
                   return (
                     <button
                       key={color.code}
