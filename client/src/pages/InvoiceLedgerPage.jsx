@@ -2,13 +2,17 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import ToolPageShell from '../components/ToolPageShell';
 import { useToast } from '../components/ToastProvider';
 import InvoiceLedgerFieldsModal from '../components/InvoiceLedgerFieldsModal';
+import { DEFAULT_INVOICE_TYPE } from '../lib/invoicePdf';
 import { buildAmountMatchResult, buildDedupResult } from '../lib/invoiceDedup';
 import {
   buildInvoiceLedgerRows,
   createInvoiceLedgerBlob,
-  DEFAULT_LEDGER_FIELD_KEYS,
+  createDefaultLedgerFieldSelectionMap,
   getInvoiceLedgerCellValue,
-  getInvoiceLedgerFieldOptions
+  getInvoiceLedgerFieldOptions,
+  isLedgerMetaField,
+  normalizeLedgerFieldSelection,
+  normalizeLedgerFieldSelectionMap
 } from '../lib/invoiceLedger';
 import {
   createInvoiceQueueItems,
@@ -29,6 +33,21 @@ const STATUS_LABEL_MAP = {
   error: '失败'
 };
 
+const MIXED_INVOICE_TYPE_MESSAGE = '检测到普通发票和火车票混合上传，请分开操作。';
+
+function collectRecognizedInvoiceTypes(items) {
+  return Array.from(new Set(
+    (items || [])
+      .map((item) => item?.invoiceData?.invoiceTypeKey)
+      .filter(Boolean)
+  ));
+}
+
+function hasMixedInvoiceTypes(items) {
+  const recognizedTypes = collectRecognizedInvoiceTypes(items);
+  return recognizedTypes.includes('train') && recognizedTypes.includes('standard');
+}
+
 function StepItem({ active, done, index, label }) {
   return (
     <div className={active ? 'invoice-step is-active' : done ? 'invoice-step is-done' : 'invoice-step'}>
@@ -48,7 +67,8 @@ function InvoiceLedgerPage() {
   const [error, setError] = useState('');
   const [downloadUrl, setDownloadUrl] = useState('');
   const [downloadName, setDownloadName] = useState('');
-  const [selectedFieldKeys, setSelectedFieldKeys] = useState(DEFAULT_LEDGER_FIELD_KEYS);
+  const [activeInvoiceTypeKey, setActiveInvoiceTypeKey] = useState(DEFAULT_INVOICE_TYPE);
+  const [fieldSelectionMap, setFieldSelectionMap] = useState(() => createDefaultLedgerFieldSelectionMap());
   const [showFieldSettings, setShowFieldSettings] = useState(false);
   const [exportedAt, setExportedAt] = useState('');
   const [enableAmountMatchReview, setEnableAmountMatchReview] = useState(true);
@@ -63,7 +83,14 @@ function InvoiceLedgerPage() {
     };
   }, [downloadUrl]);
 
-  const fieldOptions = useMemo(() => getInvoiceLedgerFieldOptions(), []);
+  const selectedFieldKeys = useMemo(
+    () => normalizeLedgerFieldSelection(fieldSelectionMap?.[activeInvoiceTypeKey], activeInvoiceTypeKey),
+    [activeInvoiceTypeKey, fieldSelectionMap]
+  );
+  const fieldOptions = useMemo(
+    () => getInvoiceLedgerFieldOptions(activeInvoiceTypeKey),
+    [activeInvoiceTypeKey]
+  );
   const fieldOptionMap = useMemo(
     () => new Map(fieldOptions.map((field) => [field.key, field])),
     [fieldOptions]
@@ -236,6 +263,22 @@ function InvoiceLedgerPage() {
         return;
       }
 
+      if (hasMixedInvoiceTypes(results)) {
+        setError(MIXED_INVOICE_TYPE_MESSAGE);
+        setStatusText('');
+        toast.error(MIXED_INVOICE_TYPE_MESSAGE);
+        return;
+      }
+
+      const recognizedTypeKey = collectRecognizedInvoiceTypes(results)[0] || activeInvoiceTypeKey;
+      const exportFieldKeys = normalizeLedgerFieldSelection(fieldSelectionMap?.[recognizedTypeKey], recognizedTypeKey);
+      if (!exportFieldKeys.length) {
+        setError('请至少选择一列导出字段。');
+        setStatusText('');
+        return;
+      }
+      setActiveInvoiceTypeKey(recognizedTypeKey);
+
       const parsedIdSet = new Set(results.map((item) => item.id));
       results.forEach((item) => {
         runtimeMap.set(item.id, {
@@ -309,7 +352,7 @@ function InvoiceLedgerPage() {
       setExportedAt(exportTime);
       const ledgerBlob = await createInvoiceLedgerBlob(
         buildInvoiceLedgerRows(finalItemsWithDedup, STATUS_LABEL_MAP, { exportTime }),
-        selectedFieldKeys
+        exportFieldKeys
       );
       const nextDownloadUrl = URL.createObjectURL(ledgerBlob);
 
@@ -462,7 +505,7 @@ function InvoiceLedgerPage() {
             <div className="invoice-panel-head">
               <div>
                 <h3>2. 设置导出字段</h3>
-                <p>导出字段请在弹窗中配置，并可选择是否开启金额一致提醒。</p>
+                <p>可按发票类型分别配置导出字段，并可选择是否开启金额一致提醒。</p>
               </div>
               <div className="invoice-panel-actions">
                 <button
@@ -477,6 +520,11 @@ function InvoiceLedgerPage() {
             </div>
 
             <div className="invoice-preview-box">
+              <span>当前发票类型</span>
+              <strong>{activeInvoiceTypeKey === 'train' ? '火车发票' : '常规发票'}</strong>
+            </div>
+
+            <div className="invoice-preview-box">
               <span>导出列预览</span>
               <strong>{selectedFields.map((field) => field.label).join(' / ')}</strong>
             </div>
@@ -488,7 +536,11 @@ function InvoiceLedgerPage() {
                   <input type="checkbox" checked readOnly />
                   <span>
                     <strong style={{ display: 'block' }}>标准重复标记</strong>
-                    <span style={{ color: '#6b829a', fontSize: 13 }}>按发票代码、号码、日期、价税合计等稳定字段判定真重复。</span>
+                    <span style={{ color: '#6b829a', fontSize: 13 }}>
+                      {activeInvoiceTypeKey === 'train'
+                        ? '火车票优先按发车时间、始发站、终点站、乘车人身份证号判定重复。'
+                        : '按发票代码、号码、日期、价税合计等稳定字段判定真重复。'}
+                    </span>
                   </span>
                 </label>
                 <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
@@ -647,7 +699,7 @@ function InvoiceLedgerPage() {
                     {item.invoiceData ? (
                       <div className="invoice-field-chips">
                         {selectedFields
-                          .filter((field) => !['sequence', 'fileName', 'fileSize', 'exportTime', 'duplicateStatus', 'duplicateBasis', 'duplicateReason', 'amountMatchStatus', 'amountMatchBasis', 'amountMatchReason', 'statusText', 'error'].includes(field.key))
+                          .filter((field) => !isLedgerMetaField(field.key))
                           .map((field) => {
                             const value = item.invoiceData?.[field.key];
                             return value ? (
@@ -686,9 +738,11 @@ function InvoiceLedgerPage() {
       </div>
       {showFieldSettings ? (
         <InvoiceLedgerFieldsModal
-          initialSelectedKeys={selectedFieldKeys}
-          onSave={(keys) => {
-            setSelectedFieldKeys(keys);
+          initialInvoiceTypeKey={activeInvoiceTypeKey}
+          initialSelectionMap={fieldSelectionMap}
+          onSave={({ invoiceTypeKey, selectionMap }) => {
+            setActiveInvoiceTypeKey(invoiceTypeKey);
+            setFieldSelectionMap(normalizeLedgerFieldSelectionMap(selectionMap));
             setShowFieldSettings(false);
           }}
           onCancel={() => setShowFieldSettings(false)}

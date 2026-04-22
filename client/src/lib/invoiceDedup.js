@@ -7,12 +7,33 @@ function cleanIdentityValue(value) {
 }
 
 export function buildDedupIdentity(invoiceData) {
+  const invoiceTypeKey = cleanIdentityValue(invoiceData?.invoiceTypeKey);
   const invoiceCode = cleanIdentityValue(invoiceData?.invoiceCode);
   const invoiceNumber = cleanIdentityValue(invoiceData?.invoiceNumber);
   const issueDate = cleanIdentityValue(invoiceData?.issueDate);
   const totalAmount = getTotalAmountValue(invoiceData);
   const sellerTaxId = cleanIdentityValue(invoiceData?.sellerTaxId);
   const buyerTaxId = cleanIdentityValue(invoiceData?.buyerTaxId);
+  const departureTime = cleanIdentityValue(invoiceData?.departureTime);
+  const departureStation = cleanIdentityValue(invoiceData?.departureStation);
+  const arrivalStation = cleanIdentityValue(invoiceData?.arrivalStation);
+  const trainPassengerIdNumber = cleanIdentityValue(invoiceData?.trainPassengerIdNumber);
+
+  if (invoiceTypeKey === 'train') {
+    if (departureTime && departureStation && arrivalStation && trainPassengerIdNumber) {
+      return {
+        key: `train-trip:${departureTime}|${departureStation}|${arrivalStation}|${trainPassengerIdNumber}`,
+        basis: '发车时间 + 始发站 + 终点站 + 乘车人身份证号',
+        summary: `${departureTime} / ${departureStation} / ${arrivalStation} / ${trainPassengerIdNumber}`
+      };
+    }
+
+    return {
+      key: '',
+      basis: '信息不足，按保留处理',
+      summary: '未识别到稳定的火车票去重主键'
+    };
+  }
 
   if (invoiceCode && invoiceNumber) {
     return {

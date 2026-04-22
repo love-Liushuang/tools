@@ -83,22 +83,21 @@ function InvoiceRuleSettingsModal({ invoiceTypeKey, initialProfile, onSave, onCa
         <div className="invoice-panel-head">
           <div>
             <h3>文件重命名规则</h3>
-            {/* <h3>文件重命名规则 - {localType}</h3> */}
             <p style={{ marginTop: 8, color: '#58718a' }}>在此为不同发票类型分别配置命名规则与优先字段。</p>
           </div>
-          <div className="invoice-panel-head-status" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              发票类型
-              <select value={localType} onChange={(e) => setLocalType(e.target.value)}>
-                {INVOICE_TYPES.map((t) => (
-                  <option key={t.key} value={t.key}>{t.label}</option>
-                ))}
-              </select>
-            </label>
-          </div>
+          <div />
         </div>
 
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 8 }}>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 8, flexWrap: 'wrap' }}>
+          <label  className="invoice-separator-field" style={{ display: 'flex', gap: 8, alignItems: 'center', fontWeight: 700 }}>
+            <span>发票类型</span>
+            <select value={localType} onChange={(e) => setLocalType(e.target.value)}>
+              {INVOICE_TYPES.map((t) => (
+                <option key={t.key} value={t.key}>{t.label}</option>
+              ))}
+            </select>
+          </label>
+
           <label className="invoice-separator-field">
             <span>分隔符</span>
             <select value={profile.separator} onChange={(e) => setProfile({ ...profile, separator: e.target.value })}>

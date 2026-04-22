@@ -1,14 +1,21 @@
 import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import pdfWorkerUrl from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
+import cMapGbUrl from 'pdfjs-dist/cmaps/UniGB-UCS2-H.bcmap?url';
+import { TRAIN_STATION_PINYIN_MAP } from './trainStationPinyinMap';
 
 GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 const COMPANY_HINT_RE = /(公司|集团|中心|银行|学校|大学|医院|事务所|研究院|研究所|工作室|俱乐部|酒店|科技|传媒|文化|贸易|商贸|服务|餐饮|药房|门诊|协会|委员会|出版社|超市|商店|门店|工厂|分公司|有限)/;
 const SELLER_SECTION_RE = /销售方(?:信息)?/;
 const NEXT_FIELD_RE = /(?:纳税人识别号|地址、电话|地址电话|开户地址及账号|开户行及账号|账号|电话|备注|项目名称|服务名称|密码区|收款人|复核|开票人|购买方|销售方)/;
-const DATE_VALUE_RE = /((?:19|20)\d{2}(?:年|[./-])\d{1,2}(?:月|[./-])\d{1,2}日?|\d{8})/;
+const DATE_VALUE_RE = /((?:19|20)\d{2}(?:年|[./-])\d{1,2}(?:月|[./-])\d{1,2}日?|(?:19|20)\d{6})/;
 const NAME_FIELD_STOP_RE = /(?:纳税人识别号|地址、电话|地址电话|地址|电话|开户地址及账号|开户地址|开户行及账号|开户行|账号|备注|项目名称|服务名称|密码区|收款人|复核|开票人|购买方|销售方|名称[:：]?|$)/;
 const PARTY_NAME_NOISE_RE = /^(?:项目名称|规格型号|单位|数量|单价|金额|税额|税率|征收率|校验码|机器编号|收款人|复核|开票人|备注|购买方|销售方|购买方信息|销售方信息|电子发票|普通发票)$/;
+const TRAIN_NO_RE = /\b([CGDKTZYSLP]\d{1,4})\b/i;
+
+function getAssetBaseUrl(assetUrl) {
+  return String(assetUrl || '').replace(/[^/]+(?:\?.*)?$/, '');
+}
 
 function normalizePdfText(text) {
   return String(text || '')
@@ -23,6 +30,192 @@ function normalizePdfText(text) {
 
 function compactText(text) {
   return normalizePdfText(text).replace(/\s+/g, '');
+}
+
+function normalizeStationName(value) {
+  const text = cleanFieldValue(value)
+    .replace(/^[^\u4E00-\u9FA5A-Za-z]+/, '')
+    .replace(/[^\u4E00-\u9FA5A-Za-z]+$/g, '');
+  if (!text) {
+    return '';
+  }
+  if (/^[A-Za-z][A-Za-z\s-]{1,40}$/.test(text)) {
+    return text.replace(/\s+/g, '');
+  }
+  return text.replace(/\s+/g, '');
+}
+
+function normalizeTrainStationPinyin(value) {
+  return normalizeStationName(value)
+    .toLowerCase()
+    .replace(/\s+/g, '')
+    .replace(/zhan$/i, '')
+    .replace(/station$/i, '');
+}
+
+function getPageLines(lines, pageNumber = 1) {
+  return (lines || []).filter((line) => line.pageNumber === pageNumber);
+}
+
+function getLineBounds(line) {
+  const segments = line?.segments || [];
+  if (!segments.length) {
+    return {
+      minX: 0,
+      maxX: 0,
+      minY: line?.y || 0,
+      maxY: line?.y || 0
+    };
+  }
+
+  const xs = segments.map((segment) => segment.x);
+  const ys = segments.map((segment) => segment.y);
+  const ends = segments.map((segment) => (
+    segment.x + Math.max(segment.width, segment.height * normalizePdfText(segment.text).length * 0.55)
+  ));
+
+  return {
+    minX: Math.min(...xs),
+    maxX: Math.max(...ends),
+    minY: Math.min(...ys),
+    maxY: Math.max(...ys)
+  };
+}
+
+function isLineInRect(line, rect = {}) {
+  const bounds = getLineBounds(line);
+  if (rect.minX !== undefined && bounds.maxX < rect.minX) {
+    return false;
+  }
+  if (rect.maxX !== undefined && bounds.minX > rect.maxX) {
+    return false;
+  }
+  if (rect.minY !== undefined && bounds.maxY < rect.minY) {
+    return false;
+  }
+  if (rect.maxY !== undefined && bounds.minY > rect.maxY) {
+    return false;
+  }
+  return true;
+}
+
+function getLinesInRect(lines, rect = {}) {
+  return (lines || []).filter((line) => isLineInRect(line, rect));
+}
+
+function getSegmentsInRect(lines, rect = {}) {
+  return (lines || []).flatMap((line) => (line?.segments || []))
+    .filter((segment) => {
+      const value = normalizePdfText(segment.text);
+      if (!value) {
+        return false;
+      }
+
+      const endX = segment.x + Math.max(segment.width, segment.height * value.length * 0.55);
+      if (rect.minX !== undefined && endX < rect.minX) {
+        return false;
+      }
+      if (rect.maxX !== undefined && segment.x > rect.maxX) {
+        return false;
+      }
+      if (rect.minY !== undefined && segment.y < rect.minY) {
+        return false;
+      }
+      if (rect.maxY !== undefined && segment.y > rect.maxY) {
+        return false;
+      }
+      return true;
+    });
+}
+
+function buildLinesFromSegments(segments) {
+  const ordered = [...segments].sort((left, right) => {
+    if (Math.abs(right.y - left.y) > 2.5) {
+      return right.y - left.y;
+    }
+    return left.x - right.x;
+  });
+  const lines = [];
+
+  ordered.forEach((segment) => {
+    const previousLine = lines[lines.length - 1];
+    const tolerance = Math.max(2.8, segment.height * 0.45);
+    if (previousLine && Math.abs(previousLine.y - segment.y) <= tolerance) {
+      previousLine.segments.push(segment);
+      previousLine.y = Math.max(previousLine.y, segment.y);
+      return;
+    }
+
+    lines.push({
+      y: segment.y,
+      segments: [segment]
+    });
+  });
+
+  return lines
+    .map((line) => cleanFieldValue(joinTextSegments(line.segments)))
+    .filter(Boolean);
+}
+
+function pickTrainStation(lines, rect = {}) {
+  const candidates = buildLinesFromSegments(getSegmentsInRect(lines, rect))
+    .map((line) => normalizeStationName(line))
+    .filter(Boolean)
+    .filter((value) => !TRAIN_NO_RE.test(value))
+    .filter((value) => !/\d{4}|\d{1,2}:\d{2}|12306|95306/.test(value))
+    .filter((value) => value.length >= 2);
+
+  if (!candidates.length) {
+    return '';
+  }
+
+  const chineseCandidate = candidates.find((value) => /[\u4E00-\u9FA5]/.test(value));
+  if (chineseCandidate) {
+    return /站$/.test(chineseCandidate) ? chineseCandidate : `${chineseCandidate}站`;
+  }
+
+  const latinCandidate = candidates.find((value) => /^[A-Za-z][A-Za-z\s-]{1,40}$/.test(value));
+  if (latinCandidate) {
+    const normalizedPinyin = normalizeTrainStationPinyin(latinCandidate);
+    const mappedName = TRAIN_STATION_PINYIN_MAP[normalizedPinyin] || '';
+    if (mappedName) {
+      return /站$/.test(mappedName) ? mappedName : `${mappedName}站`;
+    }
+    return latinCandidate.replace(/\s+/g, '');
+  }
+
+  const fallback = candidates[0];
+  return /[\u4E00-\u9FA5]/.test(fallback) && !/站$/.test(fallback)
+    ? `${fallback}站`
+    : fallback;
+}
+
+function pickTextFromRect(lines, rect = {}, options = {}) {
+  const {
+    accept,
+    reject
+  } = options;
+
+  const candidates = buildLinesFromSegments(getSegmentsInRect(lines, rect))
+    .filter(Boolean)
+    .filter((value) => (typeof accept === 'function' ? accept(value) : true))
+    .filter((value) => (typeof reject === 'function' ? !reject(value) : true));
+
+  return candidates[0] || '';
+}
+
+function detectTrainInvoice(lines, fullText) {
+  const firstPageLines = getPageLines(lines, 1);
+  const hasTrainServiceHint = /12306/.test(fullText) && /95306/.test(fullText);
+  const hasTrainNumber = firstPageLines.some((line) => TRAIN_NO_RE.test(line.compact));
+  const hasPassengerId = firstPageLines.some((line) => /\d{6,18}\*{2,}\d{2,4}/.test(line.compact));
+  const hasTicketPrice = firstPageLines.some((line) => /\d+\.\d{2}/.test(line.compact));
+  const hasTopIssueDate = firstPageLines.some((line) => (
+    isLineInRect(line, { minX: 420, minY: 320 }) && /(?:19|20)\d{2}.*\d{1,2}.*\d{1,2}/.test(line.compact)
+  ));
+
+  return (hasTrainServiceHint && hasTrainNumber && hasPassengerId)
+    || (hasTrainNumber && hasPassengerId && hasTicketPrice && hasTopIssueDate);
 }
 
 function normalizeDateValue(rawValue) {
@@ -1146,12 +1339,169 @@ function parseSellerName(lines, fullText, anchorIndex) {
   return '';
 }
 
+function parseTrainIssueDate(lines) {
+  const firstPageLines = getPageLines(lines, 1);
+  const topRightText = pickTextFromRect(firstPageLines, { minX: 420, minY: 320, maxY: 360 }, {
+    accept: (value) => /(?:19|20)\d{2}.*\d{1,2}.*\d{1,2}/.test(compactText(value))
+  });
+  return normalizeDateValue(topRightText);
+}
+
+function parseTrainInvoiceNumber(lines, fullText) {
+  const firstPageLines = getPageLines(lines, 1);
+  const topLeftText = pickTextFromRect(firstPageLines, { maxX: 240, minY: 320, maxY: 360 }, {
+    accept: (value) => /\d{10,24}/.test(value)
+  });
+  const fromTopLeft = topLeftText.match(/(\d{10,24})/);
+  if (fromTopLeft?.[1]) {
+    return fromTopLeft[1];
+  }
+  return parseInvoiceNumber(lines, fullText);
+}
+
+function parseTrainTicketPrice(lines) {
+  const firstPageLines = getPageLines(lines, 1);
+  const priceText = pickTextFromRect(firstPageLines, { maxX: 180, minY: 190, maxY: 235 }, {
+    accept: (value) => /\d+\.\d{2}/.test(value)
+  });
+  const priceMatch = priceText.match(/(\d+(?:\.\d{2})?)/);
+  return normalizeAmountValue(priceMatch?.[1] || '');
+}
+
+function parseTrainDepartureTime(lines) {
+  const firstPageLines = getPageLines(lines, 1);
+  const scheduleText = getLinesInRect(firstPageLines, { minY: 238, maxY: 268 })
+    .map((line) => line.compact)
+    .join('');
+  if (!scheduleText) {
+    return '';
+  }
+
+  const dateMatch = scheduleText.match(/((?:19|20)\d{2}(?:年|[./-])?\d{1,2}(?:月|[./-])?\d{1,2}日?)/);
+  const timeMatch = scheduleText.match(/(\d{1,2}:\d{2})/);
+  const dateValue = normalizeDateValue(dateMatch?.[1] || '');
+  if (dateValue && timeMatch?.[1]) {
+    return `${dateValue} ${timeMatch[1]}`;
+  }
+  return dateValue || timeMatch?.[1] || '';
+}
+
+function parseTrainSeatNumber(lines) {
+  const firstPageLines = getPageLines(lines, 1);
+  const scheduleText = getLinesInRect(firstPageLines, { minY: 230, maxY: 270 })
+    .map((line) => line.compact)
+    .join('');
+  if (!scheduleText) {
+    return '';
+  }
+
+  const coachSeatMatch = scheduleText.match(/(\d{1,2}车\d{1,3}[A-Z]?号?)/i)
+    || scheduleText.match(/(?:\d{1,2}:\d{2})(\d{1,2})(\d{1,3}[A-Z])(?:号)?/i)
+    || scheduleText.match(/(\d{1,2})\D{0,3}(\d{1,3}[A-Z])(?:号)?/i);
+
+  let seatValue = '';
+  if (coachSeatMatch?.[1] && coachSeatMatch?.[2]) {
+    seatValue = `${coachSeatMatch[1]}车${coachSeatMatch[2]}号`;
+  } else if (coachSeatMatch?.[1]) {
+    seatValue = coachSeatMatch[1].endsWith('号') ? coachSeatMatch[1] : `${coachSeatMatch[1]}号`;
+  }
+
+  const seatClassText = pickTextFromRect(firstPageLines, { minX: 330, maxX: 470, minY: 220, maxY: 270 }, {
+    accept: (value) => /座|卧|商务|一等|二等|无座/.test(value)
+  });
+
+  if (seatValue && seatClassText) {
+    return `${seatValue}(${seatClassText})`;
+  }
+
+  return seatValue || seatClassText || '';
+}
+
+function parseTrainPassengerIdNumber(lines) {
+  const firstPageLines = getPageLines(lines, 1);
+  const passengerIdText = pickTextFromRect(firstPageLines, { maxX: 180, minY: 140, maxY: 185 }, {
+    accept: (value) => /\d{6,18}\*{2,}\d{2,4}/.test(value)
+  });
+  const passengerIdMatch = passengerIdText.match(/(\d{6,18}\*{2,}\d{2,4})/);
+  return passengerIdMatch?.[1] || '';
+}
+
+function parseTrainPassengerName(lines) {
+  const firstPageLines = getPageLines(lines, 1);
+  return pickTextFromRect(firstPageLines, { minX: 180, maxX: 420, minY: 140, maxY: 185 }, {
+    accept: (value) => /[\u4E00-\u9FA5A-Za-z]/.test(value) && !/\d/.test(value) && value.length <= 24,
+    reject: (value) => /12306|95306/.test(value)
+  });
+}
+
+function parseTrainBuyerName(lines) {
+  const firstPageLines = getPageLines(lines, 1);
+  const bottomText = getLinesInRect(firstPageLines, { minY: 40, maxY: 90 })
+    .map((line) => line.compact)
+    .join('');
+  const buyerMatch = bottomText.match(/购买方名称[:：]?(.+?)(?=统一社会信用代码|$)/);
+  return cleanPartyName(buyerMatch?.[1] || '');
+}
+
+function parseTrainBuyerTaxId(lines) {
+  const firstPageLines = getPageLines(lines, 1);
+  const bottomText = getLinesInRect(firstPageLines, { minY: 40, maxY: 90 })
+    .map((line) => line.compact)
+    .join('');
+  const taxMatch = bottomText.match(/(?:统一社会信用代码|纳税人识别号)[:：]?([A-Z0-9]{10,30})/i);
+  return cleanFieldValue(taxMatch?.[1] || '');
+}
+
+function parseTrainInvoice(lines, fullText) {
+  const firstPageLines = getPageLines(lines, 1);
+  const ticketPrice = parseTrainTicketPrice(lines);
+  const departureStation = pickTrainStation(firstPageLines, { maxX: 250, minY: 255, maxY: 315 });
+  const arrivalStation = pickTrainStation(firstPageLines, { minX: 380, maxX: 560, minY: 255, maxY: 315 });
+  const departureTime = parseTrainDepartureTime(lines);
+  const seatNumber = parseTrainSeatNumber(lines);
+  const passengerName = parseTrainPassengerName(lines);
+  const passengerIdNumber = parseTrainPassengerIdNumber(lines);
+  const buyerName = parseTrainBuyerName(lines);
+  const buyerTaxId = parseTrainBuyerTaxId(lines);
+
+  return {
+    invoiceTypeKey: 'train',
+    invoiceTypeName: '铁路电子客票',
+    issueDate: parseTrainIssueDate(lines) || parseIssueDate(lines, fullText),
+    amount: ticketPrice,
+    invoiceAmount: ticketPrice,
+    invoiceNumber: parseTrainInvoiceNumber(lines, fullText),
+    invoiceCode: '',
+    sellerName: '',
+    buyerName: buyerName || parseBuyerName(lines, fullText),
+    buyerTaxId: buyerTaxId || parseBuyerTaxId(lines, fullText),
+    sellerTaxId: '',
+    taxAmount: '',
+    totalAmount: ticketPrice,
+    totalAmountUpper: '',
+    projectName: '',
+    remarks: '',
+    payee: '',
+    reviewer: '',
+    issuer: '',
+    departureStation,
+    arrivalStation,
+    departureTime,
+    seatNumber,
+    ticketPrice,
+    trainPassengerName: passengerName,
+    trainPassengerIdNumber: passengerIdNumber
+  };
+}
+
 export async function extractInvoiceFromPdf(file) {
   const buffer = await file.arrayBuffer();
   const loadingTask = getDocument({
     data: new Uint8Array(buffer),
     useWorkerFetch: false,
-    isEvalSupported: false
+    isEvalSupported: false,
+    cMapUrl: getAssetBaseUrl(cMapGbUrl),
+    cMapPacked: true
   });
 
   try {
@@ -1170,6 +1520,13 @@ export async function extractInvoiceFromPdf(file) {
       throw new Error('未识别到文本内容，可能是扫描件、图片版 PDF 或受保护文件。');
     }
 
+    if (detectTrainInvoice(lines, fullText)) {
+      const trainResult = parseTrainInvoice(lines, fullText);
+      if (Object.values(trainResult).some(Boolean)) {
+        return trainResult;
+      }
+    }
+
     const parsedAmount = parseAmount(lines, fullText);
     const parsedTotalAmount = parseTotalAmount(lines, fullText);
     const parsedInvoiceAmount = parseInvoiceAmount(lines, fullText) || parsedAmount;
@@ -1177,6 +1534,8 @@ export async function extractInvoiceFromPdf(file) {
     const invoiceNumberIndex = parsedInvoiceNumber ? lines.findIndex((l) => (l.compact || '').includes(parsedInvoiceNumber)) : -1;
     const parsedTaxAmount = parseTaxAmount(lines, fullText, parsedInvoiceAmount || parsedTotalAmount, invoiceNumberIndex >= 0 ? invoiceNumberIndex : undefined);
     const result = {
+      invoiceTypeKey: 'standard',
+      invoiceTypeName: '常规发票',
       issueDate: parseIssueDate(lines, fullText),
       amount: parsedInvoiceAmount,
       invoiceAmount: parsedInvoiceAmount,

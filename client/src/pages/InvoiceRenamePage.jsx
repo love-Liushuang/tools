@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import JSZip from 'jszip';
 import ToolPageShell from '../components/ToolPageShell';
 import { useToast } from '../components/ToastProvider';
+import { buildAmountMatchResult, buildDedupResult } from '../lib/invoiceDedup';
 import {
   buildRenamedFileName,
   buildRulePreview,
@@ -45,6 +46,33 @@ function getInvoiceAmountValue(invoiceData) {
   return invoiceData?.invoiceAmount || invoiceData?.amount || '';
 }
 
+function isTrainInvoiceType(invoiceTypeKey) {
+  return invoiceTypeKey === 'train';
+}
+
+function shouldUseTrainAmountTable(items) {
+  const recognizedTypes = (items || [])
+    .map((item) => item?.invoiceData?.invoiceTypeKey)
+    .filter(Boolean);
+
+  return recognizedTypes.length > 0 && recognizedTypes.every(isTrainInvoiceType);
+}
+
+function collectRecognizedInvoiceTypes(items) {
+  return Array.from(new Set(
+    (items || [])
+      .map((item) => item?.invoiceData?.invoiceTypeKey)
+      .filter(Boolean)
+  ));
+}
+
+function hasMixedInvoiceTypes(items) {
+  const recognizedTypes = collectRecognizedInvoiceTypes(items);
+  return recognizedTypes.includes('train') && recognizedTypes.includes('standard');
+}
+
+const MIXED_INVOICE_TYPE_MESSAGE = '检测到普通发票和火车票混合上传，请分开操作。';
+
 function StepItem({ active, done, index, label }) {
   return (
     <div className={active ? 'invoice-step is-active' : done ? 'invoice-step is-done' : 'invoice-step'}>
@@ -69,6 +97,7 @@ function InvoiceRenamePage() {
   const [error, setError] = useState('');
   const [downloadUrl, setDownloadUrl] = useState('');
   const [downloadName, setDownloadName] = useState('');
+  const [enableAmountMatchReview, setEnableAmountMatchReview] = useState(true);
 
   useEffect(() => {
     if (!downloadUrl) {
@@ -86,8 +115,11 @@ function InvoiceRenamePage() {
   const isBusy = isAnalyzing || isRenaming;
   const recognizedFileCount = items.filter((item) => Boolean(item.invoiceData)).length;
   const itemErrorCount = items.filter((item) => item.status === 'error').length;
+  const duplicateCount = items.filter((item) => item.duplicateStatus === 'duplicate').length;
+  const amountMatchCount = items.filter((item) => item.amountMatchStatus === 'sameAmount').length;
   const hasProcessedResult = items.some((item) => item.invoiceData || item.error);
   const activeStep = downloadUrl || isBusy || hasProcessedResult ? 3 : items.length ? 2 : 1;
+  const isTrainMode = useMemo(() => shouldUseTrainAmountTable(items), [items]);
   const previewName = useMemo(() => {
     if (activeProfile) return buildRulePreview(activeProfile.invoiceTypeKey, activeProfile);
     return buildRulePreview(ruleFields, separator);
@@ -97,6 +129,7 @@ function InvoiceRenamePage() {
       const invoiceAmount = parseAmountNumber(getInvoiceAmountValue(item.invoiceData));
       const taxAmount = parseAmountNumber(item.invoiceData?.taxAmount);
       const totalAmount = parseAmountNumber(item.invoiceData?.totalAmount);
+      const ticketPrice = parseAmountNumber(item.invoiceData?.ticketPrice || getInvoiceAmountValue(item.invoiceData));
       return {
         id: item.id,
         index: index + 1,
@@ -106,7 +139,14 @@ function InvoiceRenamePage() {
         invoiceAmount,
         taxAmount,
         totalAmount,
+        ticketPrice,
         hasAnyAmount: invoiceAmount !== null || taxAmount !== null || totalAmount !== null,
+        duplicateStatus: item.duplicateStatus || '',
+        dedupBasis: item.dedupBasis || '',
+        dedupReason: item.dedupReason || '',
+        amountMatchStatus: item.amountMatchStatus || '',
+        amountMatchBasis: item.amountMatchBasis || '',
+        amountMatchReason: item.amountMatchReason || '',
         status: item.status,
         error: item.error
       };
@@ -126,13 +166,17 @@ function InvoiceRenamePage() {
       if (row.totalAmount !== null) {
         result.totalAmountTotal += row.totalAmount;
       }
+      if (row.ticketPrice !== null) {
+        result.ticketPriceTotal += row.ticketPrice;
+      }
       return result;
     }, {
       rows: [],
       recognizedCount: 0,
       invoiceAmountTotal: 0,
       taxAmountTotal: 0,
-      totalAmountTotal: 0
+      totalAmountTotal: 0,
+      ticketPriceTotal: 0
     });
   }, [items]);
 
@@ -153,6 +197,35 @@ function InvoiceRenamePage() {
           : item
       ))
     );
+  };
+
+  const applyReminderResults = (sourceItems) => {
+    const parsedItems = (sourceItems || []).filter((item) => item.invoiceData).map((item) => ({
+      id: item.id,
+      file: item.file,
+      invoiceData: item.invoiceData
+    }));
+    const dedupResult = buildDedupResult(parsedItems);
+    const amountMatchResult = enableAmountMatchReview ? buildAmountMatchResult(parsedItems) : [];
+    const dedupMap = new Map(dedupResult.rows.map((item) => [item.id, item]));
+    const amountMatchMap = new Map(amountMatchResult.map((item) => [item.id, item]));
+
+    return (sourceItems || []).map((item) => {
+      const dedupItem = dedupMap.get(item.id);
+      const amountMatchItem = amountMatchMap.get(item.id);
+
+      return {
+        ...item,
+        duplicateStatus: dedupItem?.status || '',
+        dedupBasis: dedupItem?.dedupBasis || '',
+        dedupSummary: dedupItem?.dedupSummary || '',
+        dedupReason: dedupItem?.dedupReason || '',
+        amountMatchStatus: amountMatchItem?.amountMatchStatus || '',
+        amountMatchBasis: amountMatchItem?.amountMatchBasis || '',
+        amountMatchSummary: amountMatchItem?.amountMatchSummary || '',
+        amountMatchReason: amountMatchItem?.amountMatchReason || ''
+      };
+    });
   };
 
   const handleAddFiles = (fileList) => {
@@ -268,7 +341,7 @@ function InvoiceRenamePage() {
     }));
 
     try {
-      const { successTotal, failureTotal } = await parseInvoices(queue, '正在识别金额', {
+      const { parsedResults, successTotal, failureTotal } = await parseInvoices(queue, '正在识别金额', {
         processingStatus: 'analyzing',
         successStatus: 'analyzed'
       });
@@ -279,10 +352,19 @@ function InvoiceRenamePage() {
         return;
       }
 
+      if (hasMixedInvoiceTypes(parsedResults)) {
+        setError(MIXED_INVOICE_TYPE_MESSAGE);
+        setStatusText('');
+        toast.error(MIXED_INVOICE_TYPE_MESSAGE);
+        return;
+      }
+
+      setItems((prev) => applyReminderResults(prev));
+
       setStatusText(
         failureTotal > 0
-          ? `金额识别完成：成功 ${successTotal} 张，失败 ${failureTotal} 张。`
-          : `金额识别完成：共识别 ${successTotal} 张发票。`
+          ? `金额识别完成：成功 ${successTotal} 张，失败 ${failureTotal} 张，标记重复 ${buildDedupResult(parsedResults).rows.filter((item) => item.status === 'duplicate').length} 张${enableAmountMatchReview ? `，金额一致提醒 ${buildAmountMatchResult(parsedResults).filter((item) => item.amountMatchStatus === 'sameAmount').length} 张` : ''}。`
+          : `金额识别完成：共识别 ${successTotal} 张发票，标记重复 ${buildDedupResult(parsedResults).rows.filter((item) => item.status === 'duplicate').length} 张${enableAmountMatchReview ? `，金额一致提醒 ${buildAmountMatchResult(parsedResults).filter((item) => item.amountMatchStatus === 'sameAmount').length} 张` : ''}。`
       );
       toast.success(`金额识别完成，已更新 ${successTotal} 张发票的汇总结果。`);
     } catch (runtimeError) {
@@ -332,6 +414,15 @@ function InvoiceRenamePage() {
         successStatus: 'analyzed'
       });
       failureTotal = parseFailureTotal;
+
+      if (parsedResults.length > 0 && hasMixedInvoiceTypes(parsedResults)) {
+        setError(MIXED_INVOICE_TYPE_MESSAGE);
+        setStatusText('');
+        toast.error(MIXED_INVOICE_TYPE_MESSAGE);
+        return;
+      }
+
+      setItems((prev) => applyReminderResults(prev));
 
       for (let index = 0; index < parsedResults.length; index += 1) {
         const current = parsedResults[index];
@@ -561,6 +652,35 @@ function InvoiceRenamePage() {
               <span>命名预览</span>
               <strong>{previewName}</strong>
             </div>
+
+            <div className="invoice-preview-box">
+              <span>提醒策略</span>
+              <div style={{ marginTop: 10, display: 'grid', gap: 10 }}>
+                <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                  <input type="checkbox" checked readOnly />
+                  <span>
+                    <strong style={{ display: 'block' }}>标准重复标记</strong>
+                    <span style={{ color: '#6b829a', fontSize: 13 }}>
+                      {isTrainMode
+                        ? '火车票优先按发车时间、始发站、终点站、乘车人身份证号判定重复。'
+                        : '按发票代码、号码、日期、价税合计等稳定字段判定真重复。'}
+                    </span>
+                  </span>
+                </label>
+                <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                  <input
+                    type="checkbox"
+                    checked={enableAmountMatchReview}
+                    disabled={isBusy}
+                    onChange={(event) => setEnableAmountMatchReview(event.target.checked)}
+                  />
+                  <span>
+                    <strong style={{ display: 'block' }}>金额一致提醒</strong>
+                    <span style={{ color: '#6b829a', fontSize: 13 }}>仅按价税合计一致做弱提醒，适合排查重开发票，不会直接当成真重复。</span>
+                  </span>
+                </label>
+              </div>
+            </div>
           </section>
           <section className="invoice-panel">
             <div className="invoice-action-bar">
@@ -619,17 +739,34 @@ function InvoiceRenamePage() {
                   <strong>{amountSummary.recognizedCount}</strong>
                 </div>
                 <div className="invoice-amount-summary-card">
-                  <span>发票金额合计</span>
-                  <strong>{amountSummary.recognizedCount ? formatAmountNumber(amountSummary.invoiceAmountTotal) : '--'}</strong>
+                  <span>重复标记</span>
+                  <strong>{duplicateCount}</strong>
                 </div>
                 <div className="invoice-amount-summary-card">
-                  <span>发票税额合计</span>
-                  <strong>{amountSummary.recognizedCount ? formatAmountNumber(amountSummary.taxAmountTotal) : '--'}</strong>
+                  <span>金额一致提醒</span>
+                  <strong>{enableAmountMatchReview ? amountMatchCount : '--'}</strong>
                 </div>
-                <div className="invoice-amount-summary-card">
-                  <span>价税合计</span>
-                  <strong>{amountSummary.recognizedCount ? formatAmountNumber(amountSummary.totalAmountTotal) : '--'}</strong>
-                </div>
+                {isTrainMode ? (
+                  <div className="invoice-amount-summary-card">
+                    <span>票价合计</span>
+                    <strong>{amountSummary.recognizedCount ? formatAmountNumber(amountSummary.ticketPriceTotal) : '--'}</strong>
+                  </div>
+                ) : (
+                  <>
+                    <div className="invoice-amount-summary-card">
+                      <span>发票金额合计</span>
+                      <strong>{amountSummary.recognizedCount ? formatAmountNumber(amountSummary.invoiceAmountTotal) : '--'}</strong>
+                    </div>
+                    <div className="invoice-amount-summary-card">
+                      <span>发票税额合计</span>
+                      <strong>{amountSummary.recognizedCount ? formatAmountNumber(amountSummary.taxAmountTotal) : '--'}</strong>
+                    </div>
+                    <div className="invoice-amount-summary-card">
+                      <span>价税合计</span>
+                      <strong>{amountSummary.recognizedCount ? formatAmountNumber(amountSummary.totalAmountTotal) : '--'}</strong>
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="invoice-amount-table-wrap">
@@ -638,15 +775,32 @@ function InvoiceRenamePage() {
                     <tr>
                       <th scope="col">发票文件</th>
                       <th scope="col">发票号码</th>
-                      <th scope="col">发票金额</th>
-                      <th scope="col">发票税额</th>
-                      <th scope="col">价税合计</th>
+                      {isTrainMode ? (
+                        <th scope="col">票价</th>
+                      ) : (
+                        <>
+                          <th scope="col">发票金额</th>
+                          <th scope="col">发票税额</th>
+                          <th scope="col">价税合计</th>
+                        </>
+                      )}
                       <th scope="col">状态</th>
                     </tr>
                   </thead>
                   <tbody>
                     {amountSummary.rows.map((row) => (
-                      <tr key={`amount-${row.id}`}>
+                      <tr
+                        key={`amount-${row.id}`}
+                        className={
+                          row.duplicateStatus === 'duplicate'
+                            ? 'invoice-ledger-row is-duplicate'
+                            : enableAmountMatchReview && row.amountMatchStatus === 'sameAmount'
+                              ? 'invoice-ledger-row is-amount-match'
+                              : row.duplicateStatus === 'keptWeak'
+                                ? 'invoice-ledger-row is-weak'
+                                : ''
+                        }
+                      >
                         <td>
                           <div className="invoice-amount-file">
                             <strong title={row.fileName}>{row.fileName}</strong>
@@ -654,9 +808,15 @@ function InvoiceRenamePage() {
                           </div>
                         </td>
                         <td>{row.invoiceNumber || '--'}</td>
-                        <td className="is-number">{formatAmountNumber(row.invoiceAmount)}</td>
-                        <td className="is-number">{formatAmountNumber(row.taxAmount)}</td>
-                        <td className="is-number">{formatAmountNumber(row.totalAmount)}</td>
+                        {isTrainMode ? (
+                          <td className="is-number">{formatAmountNumber(row.ticketPrice)}</td>
+                        ) : (
+                          <>
+                            <td className="is-number">{formatAmountNumber(row.invoiceAmount)}</td>
+                            <td className="is-number">{formatAmountNumber(row.taxAmount)}</td>
+                            <td className="is-number">{formatAmountNumber(row.totalAmount)}</td>
+                          </>
+                        )}
                         <td>
                           {row.error ? (
                             <span className="invoice-amount-status-text is-error">{row.error}</span>
@@ -665,12 +825,22 @@ function InvoiceRenamePage() {
                               className={
                                 row.status === 'renamed'
                                   ? 'invoice-amount-status-text is-success'
+                                  : row.duplicateStatus === 'duplicate'
+                                    ? 'invoice-amount-status-text is-error'
+                                    : enableAmountMatchReview && row.amountMatchStatus === 'sameAmount'
+                                      ? 'invoice-amount-status-text is-identified'
                                   : row.status === 'analyzed'
                                     ? 'invoice-amount-status-text is-identified'
                                     : 'invoice-amount-status-text'
                               }
                             >
-                              {row.hasAnyAmount ? STATUS_LABEL_MAP[row.status] || '已识别' : '待识别'}
+                              {row.hasAnyAmount
+                                ? row.duplicateStatus === 'duplicate'
+                                  ? '重复'
+                                  : enableAmountMatchReview && row.amountMatchStatus === 'sameAmount'
+                                    ? '金额一致'
+                                    : STATUS_LABEL_MAP[row.status] || '已识别'
+                                : '待识别'}
                             </span>
                           )}
                         </td>
@@ -680,9 +850,15 @@ function InvoiceRenamePage() {
                   <tfoot>
                     <tr>
                       <td colSpan="2">合计</td>
-                      <td className="is-number">{amountSummary.recognizedCount ? formatAmountNumber(amountSummary.invoiceAmountTotal) : '--'}</td>
-                      <td className="is-number">{amountSummary.recognizedCount ? formatAmountNumber(amountSummary.taxAmountTotal) : '--'}</td>
-                      <td className="is-number">{amountSummary.recognizedCount ? formatAmountNumber(amountSummary.totalAmountTotal) : '--'}</td>
+                      {isTrainMode ? (
+                        <td className="is-number">{amountSummary.recognizedCount ? formatAmountNumber(amountSummary.ticketPriceTotal) : '--'}</td>
+                      ) : (
+                        <>
+                          <td className="is-number">{amountSummary.recognizedCount ? formatAmountNumber(amountSummary.invoiceAmountTotal) : '--'}</td>
+                          <td className="is-number">{amountSummary.recognizedCount ? formatAmountNumber(amountSummary.taxAmountTotal) : '--'}</td>
+                          <td className="is-number">{amountSummary.recognizedCount ? formatAmountNumber(amountSummary.totalAmountTotal) : '--'}</td>
+                        </>
+                      )}
                       <td>{amountSummary.recognizedCount ? `${amountSummary.recognizedCount} 张` : '--'}</td>
                     </tr>
                   </tfoot>
@@ -705,7 +881,7 @@ function InvoiceRenamePage() {
           ) : (
             <div className="invoice-file-list">
               {items.map((item, index) => {
-                const extractedFields = formatExtractedFieldList(item.invoiceData);
+                const extractedFields = formatExtractedFieldList(item.invoiceData, item.invoiceData?.invoiceTypeKey);
                 const statusClass = item.status === 'error'
                   ? 'invoice-status-badge is-error'
                   : item.status === 'renamed'
@@ -739,6 +915,8 @@ function InvoiceRenamePage() {
                     <div className="invoice-file-meta">
                       <span>{prettyBytes(item.file.size)}</span>
                       <span>{item.file.type || 'PDF 文件'}</span>
+                      {item.duplicateStatus ? <span>{item.duplicateStatus === 'duplicate' ? '重复' : item.duplicateStatus === 'keptWeak' ? '信息不足' : '唯一'}</span> : null}
+                      {enableAmountMatchReview && item.amountMatchStatus === 'sameAmount' ? <span>金额一致</span> : null}
                     </div>
 
                     {extractedFields.length ? (
@@ -757,6 +935,21 @@ function InvoiceRenamePage() {
                       <p className="invoice-renamed-name">新文件名：{item.renamedName}</p>
                     ) : null}
                     {item.error ? <p className="error invoice-item-error">{item.error}</p> : null}
+                    {!item.error && item.duplicateStatus ? (
+                      <p className="invoice-muted">
+                        {item.dedupBasis
+                          ? `${item.duplicateStatus === 'duplicate' ? '重复' : item.duplicateStatus === 'keptWeak' ? '信息不足' : '唯一'}：${item.dedupBasis}`
+                          : item.duplicateStatus === 'duplicate' ? '重复' : item.duplicateStatus === 'keptWeak' ? '信息不足' : '唯一'}
+                      </p>
+                    ) : null}
+                    {!item.error && item.dedupReason ? <p className="invoice-muted">{item.dedupReason}</p> : null}
+                    {!item.error && enableAmountMatchReview && item.amountMatchStatus === 'sameAmount' ? (
+                      <p className="invoice-muted">
+                        金额一致提醒：{item.amountMatchBasis || '价税合计一致'}
+                        {item.amountMatchSummary ? `（${item.amountMatchSummary}）` : ''}
+                        {item.amountMatchReason ? `，${item.amountMatchReason}` : ''}
+                      </p>
+                    ) : null}
                   </article>
                 );
               })}

@@ -1,41 +1,81 @@
-import { useEffect, useRef, useState } from 'react';
-import { DEFAULT_LEDGER_FIELD_KEYS, getInvoiceLedgerFieldOptions } from '../lib/invoiceLedger';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { DEFAULT_INVOICE_TYPE, INVOICE_TYPES } from '../lib/invoicePdf';
+import {
+  createDefaultLedgerFieldSelection,
+  getInvoiceLedgerFieldOptions,
+  normalizeLedgerFieldSelection,
+  normalizeLedgerFieldSelectionMap
+} from '../lib/invoiceLedger';
 
-function InvoiceLedgerFieldsModal({ initialSelectedKeys, onSave, onCancel }) {
-  const allFields = getInvoiceLedgerFieldOptions();
-  const [selectedKeys, setSelectedKeys] = useState(initialSelectedKeys?.length ? initialSelectedKeys : DEFAULT_LEDGER_FIELD_KEYS);
+function buildOrderedFields(fields, selectedKeys) {
+  const selectedSet = new Set(selectedKeys);
+  return [...fields].sort((left, right) => {
+    const leftIndex = selectedKeys.indexOf(left.key);
+    const rightIndex = selectedKeys.indexOf(right.key);
+
+    if (selectedSet.has(left.key) && selectedSet.has(right.key)) {
+      return leftIndex - rightIndex;
+    }
+    if (selectedSet.has(left.key)) {
+      return -1;
+    }
+    if (selectedSet.has(right.key)) {
+      return 1;
+    }
+    return 0;
+  });
+}
+
+function InvoiceLedgerFieldsModal({
+  initialInvoiceTypeKey,
+  initialSelectionMap,
+  onSave,
+  onCancel
+}) {
+  const [localType, setLocalType] = useState(initialInvoiceTypeKey || DEFAULT_INVOICE_TYPE);
+  const [selectionMap, setSelectionMap] = useState(() => normalizeLedgerFieldSelectionMap(initialSelectionMap));
   const [orderedFields, setOrderedFields] = useState(() => {
-    const selectedSet = new Set(initialSelectedKeys?.length ? initialSelectedKeys : DEFAULT_LEDGER_FIELD_KEYS);
-    return [...allFields].sort((left, right) => {
-      const leftIndex = initialSelectedKeys?.indexOf(left.key) ?? -1;
-      const rightIndex = initialSelectedKeys?.indexOf(right.key) ?? -1;
-
-      if (selectedSet.has(left.key) && selectedSet.has(right.key)) {
-        return leftIndex - rightIndex;
-      }
-      if (selectedSet.has(left.key)) {
-        return -1;
-      }
-      if (selectedSet.has(right.key)) {
-        return 1;
-      }
-      return 0;
-    });
+    const startType = initialInvoiceTypeKey || DEFAULT_INVOICE_TYPE;
+    const selectedKeys = normalizeLedgerFieldSelection(initialSelectionMap?.[startType], startType);
+    return buildOrderedFields(getInvoiceLedgerFieldOptions(startType), selectedKeys);
   });
   const dragIndexRef = useRef(null);
+  const selectedKeys = useMemo(
+    () => normalizeLedgerFieldSelection(selectionMap?.[localType], localType),
+    [localType, selectionMap]
+  );
+  const allFields = useMemo(
+    () => getInvoiceLedgerFieldOptions(localType),
+    [localType]
+  );
 
   useEffect(() => {
-    if (initialSelectedKeys?.length) {
-      setSelectedKeys(initialSelectedKeys);
-    }
-  }, [initialSelectedKeys]);
+    const nextType = initialInvoiceTypeKey || DEFAULT_INVOICE_TYPE;
+    const nextSelectionMap = normalizeLedgerFieldSelectionMap(initialSelectionMap);
+    setLocalType(nextType);
+    setSelectionMap(nextSelectionMap);
+    setOrderedFields(buildOrderedFields(
+      getInvoiceLedgerFieldOptions(nextType),
+      normalizeLedgerFieldSelection(nextSelectionMap[nextType], nextType)
+    ));
+  }, [initialInvoiceTypeKey, initialSelectionMap]);
+
+  useEffect(() => {
+    setOrderedFields(buildOrderedFields(allFields, selectedKeys));
+  }, [allFields, selectedKeys]);
 
   function toggleField(key) {
-    setSelectedKeys((prev) => (
-      prev.includes(key)
-        ? prev.filter((item) => item !== key)
-        : [...prev, key]
-    ));
+    setSelectionMap((prev) => {
+      const currentSelectedKeys = normalizeLedgerFieldSelection(prev?.[localType], localType);
+      const nextSelectedKeys = currentSelectedKeys.includes(key)
+        ? currentSelectedKeys.filter((item) => item !== key)
+        : [...currentSelectedKeys, key];
+
+      return {
+        ...prev,
+        [localType]: nextSelectedKeys
+      };
+    });
   }
 
   function handleDrop(toIndex) {
@@ -58,7 +98,15 @@ function InvoiceLedgerFieldsModal({ initialSelectedKeys, onSave, onCancel }) {
       .map((field) => field.key)
       .filter((key) => selectedKeys.includes(key));
 
-    onSave?.(orderedSelectedKeys);
+    onSave?.({
+      invoiceTypeKey: localType,
+      selectionMap: {
+        ...normalizeLedgerFieldSelectionMap(selectionMap),
+        [localType]: orderedSelectedKeys.length
+          ? orderedSelectedKeys
+          : createDefaultLedgerFieldSelection(localType)
+      }
+    });
   }
 
   return (
@@ -67,8 +115,19 @@ function InvoiceLedgerFieldsModal({ initialSelectedKeys, onSave, onCancel }) {
         <div className="invoice-panel-head">
           <div>
             <h3>导出字段设置</h3>
-            <p style={{ marginTop: 8, color: '#58718a' }}>勾选需要导出的列，并可拖拽调整 Excel 列顺序。</p>
+            <p style={{ marginTop: 8, color: '#58718a' }}>可按发票类型分别配置导出字段，并拖拽调整 Excel 列顺序。</p>
           </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 8, flexWrap: 'wrap' }}>
+          <label className="invoice-separator-field" style={{ display: 'flex', gap: 8, alignItems: 'center', fontWeight: 700 }}>
+            <span>发票类型</span>
+            <select value={localType} onChange={(event) => setLocalType(event.target.value)}>
+              {INVOICE_TYPES.map((type) => (
+                <option key={type.key} value={type.key}>{type.label}</option>
+              ))}
+            </select>
+          </label>
         </div>
 
         <div className="invoice-preview-box" style={{ marginTop: 8 }}>
@@ -76,7 +135,7 @@ function InvoiceLedgerFieldsModal({ initialSelectedKeys, onSave, onCancel }) {
           <strong>{selectedKeys.length} 列</strong>
         </div>
 
-        <div style={{ marginTop: 8, color: '#6b829a', fontSize: 13 }}>提示：勾选后才会导出，已选字段支持拖拽排序。</div>
+        <div style={{ marginTop: 8, color: '#6b829a', fontSize: 13 }}>提示：当前仅展示所选发票类型可导出的字段，勾选后才会导出，已选字段支持拖拽排序。</div>
         <div className="invoice-rule-list" style={{ marginTop: 8, overflow: 'auto' }}>
           {orderedFields.map((field, index) => {
             const checked = selectedKeys.includes(field.key);

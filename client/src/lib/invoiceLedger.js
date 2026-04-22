@@ -1,5 +1,11 @@
 import { getLedgerAmountMatchLabel, getLedgerDuplicateLabel } from './invoiceDedup';
-import { formatInvoiceFieldValue, getInvoiceFieldLabel } from './invoicePdf';
+import {
+  DEFAULT_INVOICE_TYPE,
+  INVOICE_TYPES,
+  formatInvoiceFieldValue,
+  getFieldsForInvoiceType,
+  getInvoiceFieldLabel
+} from './invoicePdf';
 
 const LEDGER_META_FIELDS = [
   { key: 'sequence', label: '序号' },
@@ -16,26 +22,6 @@ const LEDGER_META_FIELDS = [
   { key: 'error', label: '失败原因' }
 ];
 
-const LEDGER_INVOICE_FIELD_KEYS = [
-  'invoiceTypeName',
-  'invoiceCode',
-  'invoiceNumber',
-  'issueDate',
-  'buyerName',
-  'buyerTaxId',
-  'sellerName',
-  'sellerTaxId',
-  'invoiceAmount',
-  'taxAmount',
-  'totalAmount',
-  'totalAmountUpper',
-  'projectName',
-  'remarks',
-  'payee',
-  'reviewer',
-  'issuer'
-];
-
 export const DEFAULT_LEDGER_FIELD_KEYS = [
   'sequence',
   'invoiceNumber',
@@ -49,14 +35,87 @@ export const DEFAULT_LEDGER_FIELD_KEYS = [
   'exportTime'
 ];
 
-export function getInvoiceLedgerFieldOptions() {
+export const DEFAULT_TRAIN_LEDGER_FIELD_KEYS = [
+  'sequence',
+  'invoiceNumber',
+  'issueDate',
+  'departureTime',
+  'departureStation',
+  'arrivalStation',
+  'ticketPrice',
+  'seatNumber',
+  'trainPassengerName',
+  'trainPassengerIdNumber',
+  'duplicateStatus',
+  'duplicateBasis',
+  'exportTime'
+];
+
+const LEDGER_TYPE_DEFAULTS = {
+  standard: DEFAULT_LEDGER_FIELD_KEYS,
+  train: DEFAULT_TRAIN_LEDGER_FIELD_KEYS
+};
+
+const LEDGER_META_FIELD_KEY_SET = new Set(LEDGER_META_FIELDS.map((field) => field.key));
+
+function getInvoiceTypeKey(invoiceTypeKey) {
+  return INVOICE_TYPES.some((type) => type.key === invoiceTypeKey)
+    ? invoiceTypeKey
+    : DEFAULT_INVOICE_TYPE;
+}
+
+function getLedgerInvoiceFieldKeys(invoiceTypeKey = DEFAULT_INVOICE_TYPE) {
+  return getFieldsForInvoiceType(getInvoiceTypeKey(invoiceTypeKey)).map((field) => field.key);
+}
+
+export function getInvoiceLedgerFieldOptions(invoiceTypeKey = DEFAULT_INVOICE_TYPE) {
   return [
     ...LEDGER_META_FIELDS,
-    ...LEDGER_INVOICE_FIELD_KEYS.map((key) => ({
+    ...getLedgerInvoiceFieldKeys(invoiceTypeKey).map((key) => ({
       key,
       label: getInvoiceFieldLabel(key)
     }))
   ];
+}
+
+export function getAllInvoiceLedgerFieldOptions() {
+  const fieldMap = new Map(LEDGER_META_FIELDS.map((field) => [field.key, field]));
+  INVOICE_TYPES.forEach((type) => {
+    getInvoiceLedgerFieldOptions(type.key).forEach((field) => {
+      if (!fieldMap.has(field.key)) {
+        fieldMap.set(field.key, field);
+      }
+    });
+  });
+  return Array.from(fieldMap.values());
+}
+
+export function createDefaultLedgerFieldSelection(invoiceTypeKey = DEFAULT_INVOICE_TYPE) {
+  const normalizedType = getInvoiceTypeKey(invoiceTypeKey);
+  const availableFieldKeys = new Set(getInvoiceLedgerFieldOptions(normalizedType).map((field) => field.key));
+  return (LEDGER_TYPE_DEFAULTS[normalizedType] || DEFAULT_LEDGER_FIELD_KEYS)
+    .filter((key) => availableFieldKeys.has(key));
+}
+
+export function createDefaultLedgerFieldSelectionMap() {
+  return INVOICE_TYPES.reduce((result, type) => {
+    result[type.key] = createDefaultLedgerFieldSelection(type.key);
+    return result;
+  }, {});
+}
+
+export function normalizeLedgerFieldSelection(fieldKeys, invoiceTypeKey = DEFAULT_INVOICE_TYPE) {
+  const options = getInvoiceLedgerFieldOptions(invoiceTypeKey);
+  const optionKeySet = new Set(options.map((field) => field.key));
+  const normalized = Array.from(new Set((fieldKeys || []).filter((key) => optionKeySet.has(key))));
+  return normalized.length ? normalized : createDefaultLedgerFieldSelection(invoiceTypeKey);
+}
+
+export function normalizeLedgerFieldSelectionMap(fieldSelectionMap) {
+  return INVOICE_TYPES.reduce((result, type) => {
+    result[type.key] = normalizeLedgerFieldSelection(fieldSelectionMap?.[type.key], type.key);
+    return result;
+  }, {});
 }
 
 function formatFileSize(size) {
@@ -131,14 +190,14 @@ export function getInvoiceLedgerCellValue(fieldKey, row) {
       return row.error;
     default:
       return formatInvoiceFieldValue(fieldKey, row.invoiceData, {
-        invoiceTypeKey: 'standard'
+        invoiceTypeKey: row.invoiceData?.invoiceTypeKey || 'standard'
       });
   }
 }
 
 function buildInvoiceLedgerSheetData(rows, selectedFieldKeys) {
   const fieldOptionMap = new Map(
-    getInvoiceLedgerFieldOptions().map((field) => [field.key, field])
+    getAllInvoiceLedgerFieldOptions().map((field) => [field.key, field])
   );
   const activeFields = (selectedFieldKeys || [])
     .map((fieldKey) => fieldOptionMap.get(fieldKey))
@@ -150,6 +209,10 @@ function buildInvoiceLedgerSheetData(rows, selectedFieldKeys) {
     headerRow,
     bodyRows
   };
+}
+
+export function isLedgerMetaField(fieldKey) {
+  return LEDGER_META_FIELD_KEY_SET.has(fieldKey);
 }
 
 export async function createInvoiceLedgerBlob(rows, selectedFieldKeys) {
@@ -181,13 +244,20 @@ export async function createInvoiceLedgerBlob(rows, selectedFieldKeys) {
       || field.key === 'projectName'
       || field.key === 'duplicateReason'
       || field.key === 'amountMatchReason'
+      || field.key === 'seatNumber'
     )
       ? 34
-      : (field.key === 'buyerName' || field.key === 'sellerName')
+      : (field.key === 'buyerName'
+      || field.key === 'sellerName'
+      || field.key === 'trainPassengerName'
+      || field.key === 'trainPassengerIdNumber')
         ? 24
-        : field.key === 'duplicateBasis'
+        : (field.key === 'duplicateBasis'
+        || field.key === 'departureStation'
+        || field.key === 'arrivalStation')
           ? 24
-          : field.key === 'amountMatchBasis'
+          : (field.key === 'amountMatchBasis'
+          || field.key === 'departureTime')
             ? 18
             : field.key === 'exportTime'
               ? 20
