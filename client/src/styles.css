@@ -1653,7 +1653,8 @@ pre {
 }
 
 .field-block input,
-.field-block select {
+.field-block select,
+.field-block textarea {
   width: 100%;
   border-radius: 10px;
   border: 1px solid #cfdced;
@@ -1666,6 +1667,79 @@ pre {
 .status-text {
   margin: 12px 0 0;
   color: #2b628f;
+}
+
+.text-image-layout {
+  display: grid;
+  gap: 20px;
+}
+
+.text-image-textarea textarea {
+  min-height: 180px;
+  resize: vertical;
+}
+
+.text-image-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.text-image-color-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.text-image-color-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 56px;
+  gap: 10px;
+  align-items: center;
+}
+
+.text-image-color-row input[type="color"] {
+  padding: 4px;
+  min-height: 44px;
+}
+
+.text-image-preview-card {
+  overflow: hidden;
+  border: 1px solid #d8e3ef;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #fbfdff 0%, #f3f7fb 100%);
+}
+
+.text-image-preview-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  border-bottom: 1px solid #e4edf6;
+  color: #55708d;
+  font-size: 14px;
+}
+
+.text-image-preview-stage {
+  display: grid;
+  place-items: center;
+  min-height: 260px;
+  padding: 24px;
+  background-image:
+    linear-gradient(45deg, rgba(147, 168, 189, 0.12) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(147, 168, 189, 0.12) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(147, 168, 189, 0.12) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(147, 168, 189, 0.12) 75%);
+  background-size: 24px 24px;
+  background-position: 0 0, 0 12px, 12px -12px, -12px 0;
+}
+
+.text-image-preview-stage img {
+  display: block;
+  max-width: 100%;
+  max-height: 520px;
+  border-radius: 12px;
+  box-shadow: 0 16px 40px rgba(61, 89, 117, 0.18);
 }
 
 .urlcodec-shell {
@@ -3218,6 +3292,11 @@ button:disabled {
 
   .tool-head {
     flex-direction: column;
+  }
+
+  .text-image-preview-meta {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .diff-table-head {

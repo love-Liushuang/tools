@@ -8,6 +8,7 @@ import TextLetterPage from './pages/TextLetterPage';
 import TextDiffPage from './pages/TextDiffPage';
 import UnlockPdfPage from './pages/UnlockPdfPage';
 import ImageConvertPage from './pages/ImageConvertPage';
+import TextToImagePage from './pages/TextToImagePage';
 import SvgBase64Page from './pages/SvgBase64Page';
 import SvgPathPage from './pages/SvgPathPage';
 import SvgPreviewPage from './pages/SvgPreviewPage';
@@ -73,6 +74,8 @@ function App() {
           <Route path="invoice-ledger-export-train" element={<Navigate to="/tools/invoice-ledger-export-train" replace />} />
           <Route path="火车票台账导出" element={<Navigate to="/tools/invoice-ledger-export-train" replace />} />
           <Route path="svg-base64" element={<Navigate to="/tools/svg-base64" replace />} />
+          <Route path="text-to-image" element={<Navigate to="/tools/text-to-image" replace />} />
+          <Route path="文字生成图片" element={<Navigate to="/tools/text-to-image" replace />} />
           <Route path="SVG转Base64" element={<Navigate to="/tools/svg-base64" replace />} />
           <Route path="svg-path" element={<Navigate to="/tools/svg-path" replace />} />
           <Route path="SVG路径预览" element={<Navigate to="/tools/svg-path" replace />} />
@@ -158,6 +161,7 @@ function App() {
             )}
           />
           <Route path="tools/image-convert" element={<ImageConvertPage />} />
+          <Route path="tools/text-to-image" element={<TextToImagePage />} />
           <Route path="tools/changelog" element={<ChangelogPage />} />
           <Route path="tools/svg-base64" element={<SvgBase64Page />} />
           <Route path="tools/svg-path" element={<SvgPathPage />} />

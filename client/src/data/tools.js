@@ -117,6 +117,13 @@ export const tools = [
         path: '/tools/image-convert'
     },
     {
+        id: 'text-to-image',
+        name: '文字生成图片',
+        desc: '将单行或多行文字生成图片，支持宽高、对齐、字体、字号、行高和颜色设置。',
+        category: ['image', 'text'],
+        path: '/tools/text-to-image'
+    },
+    {
         id: 'getgzhtoutu',
         name: '微信公众号封面获取',
         desc: '输入公众号文章链接，提取封面并预览。',
