@@ -17,6 +17,14 @@ function getAssetBaseUrl(assetUrl) {
   return String(assetUrl || '').replace(/[^/]+(?:\?.*)?$/, '');
 }
 
+function getPdfCMapUrl() {
+  if (import.meta.env.DEV) {
+    return getAssetBaseUrl(cMapGbUrl);
+  }
+
+  return `${import.meta.env.BASE_URL}pdfjs/cmaps/`;
+}
+
 function normalizePdfText(text) {
   return String(text || '')
     .replace(/\u0000/g, '')
@@ -1503,7 +1511,7 @@ export async function extractInvoiceFromPdf(file) {
     data: new Uint8Array(buffer),
     useWorkerFetch: false,
     isEvalSupported: false,
-    cMapUrl: getAssetBaseUrl(cMapGbUrl),
+    cMapUrl: getPdfCMapUrl(),
     cMapPacked: true
   });
 

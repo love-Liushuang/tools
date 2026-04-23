@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
@@ -32,8 +34,25 @@ function isolateVideoToolPlugin() {
   };
 }
 
+function copyPdfjsCMapsPlugin() {
+  const sourceDir = path.resolve(__dirname, 'node_modules', 'pdfjs-dist', 'cmaps');
+
+  return {
+    name: 'copy-pdfjs-cmaps',
+    closeBundle() {
+      if (!fs.existsSync(sourceDir)) {
+        return;
+      }
+
+      const targetDir = path.resolve(__dirname, 'dist', 'pdfjs', 'cmaps');
+      fs.mkdirSync(targetDir, { recursive: true });
+      fs.cpSync(sourceDir, targetDir, { recursive: true });
+    }
+  };
+}
+
 export default defineConfig({
-  plugins: [react(), isolateVideoToolPlugin()],
+  plugins: [react(), isolateVideoToolPlugin(), copyPdfjsCMapsPlugin()],
   optimizeDeps: {
     exclude: ['@ffmpeg/ffmpeg']
   },

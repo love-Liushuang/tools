@@ -103,7 +103,7 @@ function App() {
               <LazyPage>
                 <InvoiceRenamePage
                   fixedInvoiceTypeKey="standard"
-                  toolTitle="批量重命名与金额汇总（普通发票）"
+                  toolTitle="批量重命名与金额汇总（PDF电子发票）"
                   toolDesc="本地完成普通电子发票解析、金额汇总、批量重命名和 ZIP 打包下载。"
                 />
               </LazyPage>
@@ -139,7 +139,7 @@ function App() {
               <LazyPage>
                 <InvoiceLedgerPage
                   fixedInvoiceTypeKey="standard"
-                  toolTitle="台账导出（普通发票）"
+                  toolTitle="台账导出（PDF电子发票）"
                   toolDesc="本地批量识别普通电子发票，按所选字段生成 Excel 台账，适合整理报销、归档和对账数据。"
                 />
               </LazyPage>

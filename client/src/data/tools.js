@@ -76,7 +76,7 @@ export const tools = [
     },
     {
         id: 'invoice-pdf-rename-standard',
-        name: '批量重命名与金额汇总（普通发票）',
+        name: '批量重命名与金额汇总（PDF电子发票）',
         desc: '本地批量解析普通电子发票，支持金额汇总、重命名并打包下载。',
         category: ['invoice', 'wps'],
         path: '/tools/invoice-pdf-rename-standard'
@@ -97,7 +97,7 @@ export const tools = [
     },
     {
         id: 'invoice-ledger-export-standard',
-        name: '台账导出（普通发票）',
+        name: '台账导出（PDF电子发票）',
         desc: '本地批量识别普通电子发票并导出 Excel 台账，支持自选导出列。',
         category: ['invoice', 'wps'],
         path: '/tools/invoice-ledger-export-standard'
