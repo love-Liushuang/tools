@@ -210,4 +210,5 @@ export const featuredToolIds = [
     'invoice-ledger-export-train',
     'getgzhtoutu',
     'webshot',
+    'common-symbols',
 ];

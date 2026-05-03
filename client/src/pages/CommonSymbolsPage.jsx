@@ -125,6 +125,21 @@ const SYMBOL_ITEMS = [
   { category: 'greek', value: 'Δ', name: 'Delta 大写', usage: '主要用于变化量、差值和图表标记。', keywords: 'delta 差值 变化量 图表 希腊' }
 ];
 
+const DEFAULT_FOCUS_CATEGORY = 'office';
+
+function getSymbolId(item, index) {
+  return `${item.category}-${index}`;
+}
+
+function getDefaultSelectedId() {
+  const defaultIndex = SYMBOL_ITEMS.findIndex((item) => item.category === DEFAULT_FOCUS_CATEGORY);
+  if (defaultIndex < 0) {
+    return '';
+  }
+
+  return getSymbolId(SYMBOL_ITEMS[defaultIndex], defaultIndex);
+}
+
 function normalizeSymbolText(value) {
   return String(value || '').trim().toLowerCase().replace(/\s+/g, '');
 }
@@ -142,13 +157,13 @@ function getCategoryLabel(categoryKey) {
 function CommonSymbolsPage() {
   const [query, setQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
-  const [selectedId, setSelectedId] = useState('number-0');
+  const [selectedId, setSelectedId] = useState(getDefaultSelectedId);
   const toast = useToast();
 
   const symbolItems = useMemo(() => {
     return SYMBOL_ITEMS.map((item, index) => ({
       ...item,
-      id: `${item.category}-${index}`,
+      id: getSymbolId(item, index),
       categoryLabel: getCategoryLabel(item.category),
       unicode: getUnicodeText(item.value),
       searchIndex: normalizeSymbolText(`${item.value} ${item.name} ${item.usage} ${item.keywords}`)
