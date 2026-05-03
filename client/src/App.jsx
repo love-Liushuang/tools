@@ -4,6 +4,7 @@ import SiteLayout from './components/SiteLayout';
 import HomePage from './pages/HomePage';
 import JsonFormatterPage from './pages/JsonFormatterPage';
 import TextStatsPage from './pages/TextStatsPage';
+import CommonSymbolsPage from './pages/CommonSymbolsPage';
 import TextLetterPage from './pages/TextLetterPage';
 import TextDiffPage from './pages/TextDiffPage';
 import UnlockPdfPage from './pages/UnlockPdfPage';
@@ -76,6 +77,8 @@ function App() {
           <Route path="svg-base64" element={<Navigate to="/tools/svg-base64" replace />} />
           <Route path="text-to-image" element={<Navigate to="/tools/text-to-image" replace />} />
           <Route path="文字生成图片" element={<Navigate to="/tools/text-to-image" replace />} />
+          <Route path="common-symbols" element={<Navigate to="/tools/common-symbols" replace />} />
+          <Route path="常用符号" element={<Navigate to="/tools/common-symbols" replace />} />
           <Route path="SVG转Base64" element={<Navigate to="/tools/svg-base64" replace />} />
           <Route path="svg-path" element={<Navigate to="/tools/svg-path" replace />} />
           <Route path="SVG路径预览" element={<Navigate to="/tools/svg-path" replace />} />
@@ -93,6 +96,7 @@ function App() {
           <Route path="tools/base64" element={<UrlCodecPage initialCodec="base64" />} />
           <Route path="tools/file-encrypt" element={<FileEncryptPage />} />
           <Route path="tools/text-stats" element={<TextStatsPage />} />
+          <Route path="tools/common-symbols" element={<CommonSymbolsPage />} />
           <Route path="tools/text-letter" element={<TextLetterPage />} />
           <Route path="tools/txt-diff" element={<TextDiffPage />} />
           <Route path="tools/unlock-pdf" element={<UnlockPdfPage />} />

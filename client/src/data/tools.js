@@ -47,6 +47,13 @@ export const tools = [
         path: '/tools/text-stats'
     },
     {
+        id: 'common-symbols',
+        name: '常用符号',
+        desc: '整理键盘不易输入的编号、括号、校对、数学、单位和文书符号，支持搜索与复制。',
+        category: ['text', 'wps'],
+        path: '/tools/common-symbols'
+    },
+    {
         id: 'markdown-editor',
         name: 'Markdown 在线编辑器',
         desc: '实时预览、导入导出、常用语法工具栏。',
