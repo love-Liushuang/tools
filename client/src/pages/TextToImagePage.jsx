@@ -49,6 +49,8 @@ const DEFAULT_FORM = {
   foreColor: '#000000'
 };
 
+const TEXT_RENDER_SAFE_PADDING = 1;
+
 function normalizeImageTypeKey(value) {
   return IMAGE_TYPE_OPTIONS.some((item) => item.key === value) ? value : DEFAULT_FORM.imageType;
 }
@@ -144,6 +146,38 @@ function wrapTextToLines(ctx, text, maxWidth) {
   return lines.length ? lines : [''];
 }
 
+function measureLineBounds(ctx, line, fontSize) {
+  const metrics = ctx.measureText(line || '国');
+  const ascent = Number.isFinite(metrics.actualBoundingBoxAscent) && metrics.actualBoundingBoxAscent > 0
+    ? metrics.actualBoundingBoxAscent
+    : Number.isFinite(metrics.fontBoundingBoxAscent) && metrics.fontBoundingBoxAscent > 0
+      ? metrics.fontBoundingBoxAscent
+      : fontSize * 0.8;
+  const descent = Number.isFinite(metrics.actualBoundingBoxDescent) && metrics.actualBoundingBoxDescent > 0
+    ? metrics.actualBoundingBoxDescent
+    : Number.isFinite(metrics.fontBoundingBoxDescent) && metrics.fontBoundingBoxDescent > 0
+      ? metrics.fontBoundingBoxDescent
+      : fontSize * 0.2;
+
+  return { ascent, descent };
+}
+
+function getTextBlockBounds(lineMetrics, lineHeight) {
+  let top = 0;
+  let bottom = 0;
+
+  lineMetrics.forEach((metrics, index) => {
+    const baseline = index * lineHeight;
+    top = Math.min(top, baseline - metrics.ascent - TEXT_RENDER_SAFE_PADDING);
+    bottom = Math.max(bottom, baseline + metrics.descent + TEXT_RENDER_SAFE_PADDING);
+  });
+
+  return {
+    top,
+    height: Math.max(0, bottom - top)
+  };
+}
+
 function drawTextImage(options) {
   const width = normalizePositiveInt(options.width, 800);
   const height = normalizePositiveInt(options.height, 800);
@@ -170,7 +204,7 @@ function drawTextImage(options) {
 
   ctx.fillStyle = foreColor;
   ctx.font = `${fontSize}px ${options.fontName || DEFAULT_FORM.fontName}`;
-  ctx.textBaseline = 'top';
+  ctx.textBaseline = 'alphabetic';
 
   const horizontalAlign = String(options.horizontalAlign || '2');
   const verticalAlign = String(options.verticalAlign || '2');
@@ -178,18 +212,20 @@ function drawTextImage(options) {
   const verticalPadding = verticalAlign === '2' ? 0 : normalizePadding(options.verticalPadding, 10);
   const contentWidth = Math.max(1, width - (horizontalAlign === '2' ? 0 : horizontalPadding * 2));
   const lines = wrapTextToLines(ctx, safeText, contentWidth);
-  const textBlockHeight = Math.max(lineHeight, lines.length * lineHeight);
+  const lineMetrics = lines.map((line) => measureLineBounds(ctx, line, fontSize));
+  const textBlockBounds = getTextBlockBounds(lineMetrics, lineHeight);
+  const textBlockHeight = textBlockBounds.height;
 
-  let startY = verticalPadding;
+  let blockTopY = verticalPadding;
   if (verticalAlign === '2') {
-    startY = Math.max(0, (height - textBlockHeight) / 2);
+    blockTopY = Math.max(0, (height - textBlockHeight) / 2);
   }
   if (verticalAlign === '3') {
-    startY = Math.max(0, height - textBlockHeight - verticalPadding);
+    blockTopY = Math.max(0, height - textBlockHeight - verticalPadding);
   }
 
-  ctx.textBaseline = 'middle';
   ctx.textAlign = horizontalAlign === '1' ? 'left' : horizontalAlign === '3' ? 'right' : 'center';
+  const firstBaselineY = blockTopY - textBlockBounds.top;
 
   lines.forEach((line, index) => {
     const x = horizontalAlign === '1'
@@ -197,7 +233,7 @@ function drawTextImage(options) {
       : horizontalAlign === '3'
         ? width - horizontalPadding
         : width / 2;
-    const y = startY + index * lineHeight + lineHeight / 2;
+    const y = firstBaselineY + index * lineHeight;
     ctx.fillText(line, x, y);
   });
 

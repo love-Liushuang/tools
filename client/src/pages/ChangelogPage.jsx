@@ -3,6 +3,13 @@ import React from 'react';
 function ChangelogPage () {
     const entries = [
         {
+            version: 'v1.13.5',
+            date: '2026-05-03',
+            items: [
+                '文字生成图片 兼容性优化：按 Canvas 实际字体边界计算垂直排版，改善 Windows 和不同浏览器下上下居中偏移的问题。',
+            ],
+        },
+        {
             version: 'v1.13.4',
             date: '2026-04-23',
             items: [
