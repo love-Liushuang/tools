@@ -1,7 +1,16 @@
-import React from 'react';
+import ToolPageShell from '../components/ToolPageShell';
 
 function ChangelogPage () {
     const entries = [
+        {
+            version: 'v1.14.0',
+            date: '2026-05-06',
+            items: [
+                '图片 Base64 互转 工具上线：支持 PNG / WebP 图片转纯 Base64，并可一键复制 Base64 或 Data URI。',
+                'Base64 转图片：粘贴纯 Base64 或 Data URI 后自动渲染预览，自动识别 PNG / WebP，并支持下载 WebP、PNG。',
+                '交互优化：图片转 Base64 与 Base64 转图片使用 Tab 切换，输入区与预览区左右排布，全部在浏览器本地完成。',
+            ],
+        },
         {
             version: 'v1.13.5',
             date: '2026-05-03',
@@ -196,26 +205,25 @@ function ChangelogPage () {
     ];
 
     return (
-        <main className="tool-page">
-            <section className="tool-card">
-                <h2 style={{ fontSize: 28 }}>更新日志</h2>
-                <div style={{ marginTop: 12 }}>
-                    {entries.map((e) => (
-                        <div key={e.version} style={{ marginBottom: 18 }}>
-                            <div style={{ display: 'flex', gap: 12, alignItems: 'baseline' }}>
-                                <strong style={{ fontSize: 24 }}>{e.version}</strong>
-                                <span style={{ color: '#66788f' }}>{e.date}</span>
-                            </div>
-                            <ul style={{ marginTop: 8, paddingLeft: 18 }}>
-                                {e.items.map((it, idx) => (
-                                    <li key={idx} style={{ marginBottom: 6 }}>{it}</li>
-                                ))}
-                            </ul>
+        <ToolPageShell title="更新日志" desc="记录工具上线、功能增强和体验修复。">
+            <div className="changelog-list">
+                {entries.map((entry) => (
+                    <article className="changelog-entry" key={entry.version}>
+                        <div className="changelog-entry-head">
+                            <strong className="changelog-version">{entry.version}</strong>
+                            <time className="changelog-date" dateTime={entry.date}>
+                                {entry.date}
+                            </time>
                         </div>
-                    ))}
-                </div>
-            </section>
-        </main>
+                        <ul className="changelog-items">
+                            {entry.items.map((item, index) => (
+                                <li key={`${entry.version}-${index}`}>{item}</li>
+                            ))}
+                        </ul>
+                    </article>
+                ))}
+            </div>
+        </ToolPageShell>
     );
 }
 

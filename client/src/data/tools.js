@@ -124,6 +124,13 @@ export const tools = [
         path: '/tools/image-convert'
     },
     {
+        id: 'image-base64',
+        name: '图片 Base64 互转',
+        desc: 'PNG/WebP 与 Base64/Data URI 互转，支持预览和 PNG/WebP 下载。',
+        category: ['image', 'encode'],
+        path: '/tools/image-base64'
+    },
+    {
         id: 'text-to-image',
         name: '文字生成图片',
         desc: '将单行或多行文字生成图片，支持宽高、对齐、字体、字号、行高和颜色设置。',
