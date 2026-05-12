@@ -4,6 +4,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 const MULTI_THREAD_TOOL_PATH = '/tools/video-to-gif';
+const ADSENSE_BLOCK_RE = /\s*<!-- adsense:start -->[\s\S]*?<!-- adsense:end -->/gi;
 
 function shouldIsolateVideoTool(reqUrl = '') {
   const pathname = reqUrl.split('?')[0];
@@ -34,6 +35,19 @@ function isolateVideoToolPlugin() {
   };
 }
 
+function skipAdsenseInDevPlugin() {
+  return {
+    name: 'skip-adsense-in-dev',
+    transformIndexHtml(html, context) {
+      if (!context.server) {
+        return html;
+      }
+
+      return html.replace(ADSENSE_BLOCK_RE, '');
+    }
+  };
+}
+
 function copyPdfjsCMapsPlugin() {
   const sourceDir = path.resolve(__dirname, 'node_modules', 'pdfjs-dist', 'cmaps');
 
@@ -52,7 +66,7 @@ function copyPdfjsCMapsPlugin() {
 }
 
 export default defineConfig({
-  plugins: [react(), isolateVideoToolPlugin(), copyPdfjsCMapsPlugin()],
+  plugins: [react(), skipAdsenseInDevPlugin(), isolateVideoToolPlugin(), copyPdfjsCMapsPlugin()],
   optimizeDeps: {
     exclude: ['@ffmpeg/ffmpeg']
   },

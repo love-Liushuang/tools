@@ -57,7 +57,7 @@ export const tools = [
         id: 'markdown-editor',
         name: 'Markdown 在线编辑器',
         desc: '实时预览、导入导出、常用语法工具栏。',
-        category: 'text',
+        category: ['text', 'dev'],
         path: '/tools/markdown-editor'
     },
     {
