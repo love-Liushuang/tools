@@ -41,21 +41,6 @@ a {
   box-shadow: 0 18px 42px rgba(21, 52, 82, 0.22);
 }
 
-.adblockNoticeClose {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 32px;
-  height: 32px;
-  border: 1px solid #d0dfed;
-  border-radius: 8px;
-  background: #f6fbff;
-  color: #45627f;
-  cursor: pointer;
-  font-size: 18px;
-  line-height: 1;
-}
-
 .adblockNoticeKicker {
   margin: 0 0 8px;
   color: #1c78dc;
@@ -73,6 +58,14 @@ a {
 .adblockNoticePanel p {
   color: #4b6480;
   line-height: 1.7;
+  text-align: justify;
+  text-indent: 2em;
+}
+
+.adblockNoticeActions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .adblockNoticeButton {
@@ -85,6 +78,18 @@ a {
   cursor: pointer;
   font-size: 15px;
   font-weight: 700;
+}
+
+.adblockNoticeButton.is-secondary {
+  border: 1px solid #d0dfed;
+  background: #f6fbff;
+  color: #45627f;
+}
+
+@media (max-width: 520px) {
+  .adblockNoticeActions {
+    grid-template-columns: 1fr;
+  }
 }
 
 .site-bg {
