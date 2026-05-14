@@ -3,6 +3,13 @@ import ToolPageShell from '../components/ToolPageShell';
 function ChangelogPage () {
     const entries = [
         {
+            version: 'v1.14.1',
+            date: '2026-05-14',
+            items: [
+                '首页工具搜索上线：支持按工具名称和描述进行模糊搜索，并可与分类筛选配合使用。',
+            ],
+        },
+        {
             version: 'v1.14.0',
             date: '2026-05-06',
             items: [

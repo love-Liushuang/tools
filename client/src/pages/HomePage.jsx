@@ -15,6 +15,9 @@ function getToolCategoryKeys(tool) {
 function HomePage() {
   const [activeCategory, setActiveCategory] = useState('all');
   const [featuredExpanded, setFeaturedExpanded] = useState(false);
+  const [searchText, setSearchText] = useState('');
+
+  const searchKeyword = searchText.trim().toLocaleLowerCase();
 
   const featuredTools = useMemo(() => {
     return featuredToolIds
@@ -32,11 +35,20 @@ function HomePage() {
   const hasMoreFeatured = featuredTools.length > FEATURED_DEFAULT_COUNT;
 
   const visibleTools = useMemo(() => {
-    if (activeCategory === 'all') {
-      return tools;
+    const categoryTools = activeCategory === 'all'
+      ? tools
+      : tools.filter((tool) => getToolCategoryKeys(tool).includes(activeCategory));
+
+    if (!searchKeyword) {
+      return categoryTools;
     }
-    return tools.filter((tool) => getToolCategoryKeys(tool).includes(activeCategory));
-  }, [activeCategory]);
+
+    return categoryTools.filter((tool) => {
+      const name = tool.name?.toLocaleLowerCase() || '';
+      const desc = tool.desc?.toLocaleLowerCase() || '';
+      return name.includes(searchKeyword) || desc.includes(searchKeyword);
+    });
+  }, [activeCategory, searchKeyword]);
 
   return (
     <main>
@@ -86,7 +98,24 @@ function HomePage() {
         </section>
       ) : null}
 
-      <section className="category-bar">
+      <section className="tool-search-panel" aria-label="工具搜索">
+        <div className="tool-search-input-row">
+          <input
+            aria-label="搜索工具"
+            type="search"
+            value={searchText}
+            onChange={(event) => setSearchText(event.target.value)}
+            placeholder="搜索工具名称或描述"
+          />
+          {searchText ? (
+            <button type="button" onClick={() => setSearchText('')}>
+              清空
+            </button>
+          ) : null}
+        </div>
+      </section>
+
+      <section className="category-bar" aria-label="工具分类">
         {categories.map((category) => (
           <button
             key={category.key}
@@ -99,15 +128,19 @@ function HomePage() {
         ))}
       </section>
 
-      <section className="tool-grid">
-        {visibleTools.map((tool) => (
-          <Link className="tool-item" key={tool.id} to={tool.path}>
-            <h3>{tool.name}</h3>
-            <p>{tool.desc}</p>
-            <span>立即使用</span>
-          </Link>
-        ))}
-      </section>
+      {visibleTools.length ? (
+        <section className="tool-grid">
+          {visibleTools.map((tool) => (
+            <Link className="tool-item" key={tool.id} to={tool.path}>
+              <h3>{tool.name}</h3>
+              <p>{tool.desc}</p>
+              <span>立即使用</span>
+            </Link>
+          ))}
+        </section>
+      ) : (
+        <section className="tool-empty">没有找到匹配的工具。</section>
+      )}
     </main>
   );
 }
