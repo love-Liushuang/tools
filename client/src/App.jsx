@@ -24,6 +24,7 @@ import MarkdownEditorPage from './pages/MarkdownEditorPage';
 import HotTrendsPage from './pages/HotTrendsPage';
 import Md5Page from './pages/Md5Page';
 import UrlCodecPage from './pages/UrlCodecPage';
+import IsoCodesPage from './pages/IsoCodesPage';
 import EmojiListPage from './pages/EmojiListPage';
 import EmojiTopicsPage from './pages/EmojiTopicsPage';
 import EmojiTopicDetailPage from './pages/EmojiTopicDetailPage';
@@ -109,11 +110,14 @@ function App() {
             <Route path="urldecode" element={<Navigate to="/tools/url-codec" replace />} />
             <Route path="URL编码" element={<Navigate to="/tools/url-codec" replace />} />
             <Route path="URL解码" element={<Navigate to="/tools/url-codec" replace />} />
+            <Route path="iso-codes" element={<Navigate to="/tools/iso-codes" replace />} />
+            <Route path="ISO代码查询" element={<Navigate to="/tools/iso-codes" replace />} />
             <Route path="tools/json-formatter" element={<JsonFormatterPage />} />
             <Route path="tools/url-codec" element={<UrlCodecPage />} />
             <Route path="tools/urlencode" element={<Navigate to="/tools/url-codec" replace />} />
             <Route path="tools/urldecode" element={<Navigate to="/tools/url-codec" replace />} />
             <Route path="tools/base64" element={<UrlCodecPage initialCodec="base64" />} />
+            <Route path="tools/iso-codes" element={<IsoCodesPage />} />
             <Route path="tools/file-encrypt" element={<FileEncryptPage />} />
             <Route path="tools/text-stats" element={<TextStatsPage />} />
             <Route path="tools/common-symbols" element={<CommonSymbolsPage />} />

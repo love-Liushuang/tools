@@ -26,6 +26,13 @@ export const tools = [
         path: '/tools/url-codec'
     },
     {
+        id: 'iso-codes',
+        name: 'ISO 代码查询',
+        desc: '查询国家/地区 ISO 二字、三字、数字代码，以及七大洲中英文代码。',
+        category: ['dev', 'encode'],
+        path: '/tools/iso-codes'
+    },
+    {
         id: 'file-encrypt',
         name: '文件加密/解密（本地）',
         desc: 'AES-256-GCM，本地浏览器加解密，不上传服务器。',

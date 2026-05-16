@@ -410,6 +410,166 @@ a {
   padding: 14px;
 }
 
+.iso-code-shell {
+  display: grid;
+  gap: 14px;
+}
+
+.iso-code-toolbar {
+  display: grid;
+  gap: 12px;
+}
+
+.iso-code-search {
+  margin: 0;
+}
+
+.iso-code-search-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.iso-code-search-row input {
+  width: 100%;
+  border: 1px solid #c8daec;
+  border-radius: 10px;
+  background: #fff;
+  color: #19304a;
+  padding: 11px 12px;
+  font-size: 15px;
+  outline: none;
+}
+
+.iso-code-search-row input:focus {
+  border-color: #1c78dc;
+  box-shadow: 0 0 0 3px rgba(28, 120, 220, 0.12);
+}
+
+.iso-code-search-row button,
+.iso-code-tabs button {
+  border: 1px solid #c0d6ec;
+  border-radius: 10px;
+  background: #f4f9ff;
+  color: #1f5f97;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.iso-code-search-row button {
+  padding: 0 14px;
+}
+
+.iso-code-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.iso-code-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+}
+
+.iso-code-tabs button em {
+  color: #5d7895;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.iso-code-tabs button.active {
+  border-color: #1c78dc;
+  background: #1c78dc;
+  color: #fff;
+}
+
+.iso-code-tabs button.active em {
+  color: rgba(255, 255, 255, 0.84);
+}
+
+.iso-code-section {
+  border: 1px solid #e2ebf5;
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.iso-code-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px;
+  border-bottom: 1px solid #e2ebf5;
+  background: #f7fbff;
+}
+
+.iso-code-section-head h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.iso-code-section-head span {
+  color: #55708b;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.iso-code-table-wrap {
+  overflow-x: auto;
+}
+
+.iso-code-table {
+  width: 100%;
+  min-width: 680px;
+  border-collapse: collapse;
+}
+
+.iso-code-table th,
+.iso-code-table td {
+  border-bottom: 1px solid #edf2f8;
+  padding: 11px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.iso-code-table th {
+  color: #45627f;
+  background: #fbfdff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.iso-code-table td:first-child,
+.iso-code-table td:nth-child(2),
+.iso-code-table td:nth-child(3) {
+  color: #19304a;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.iso-code-table td strong {
+  display: block;
+  color: #19304a;
+}
+
+.iso-code-table td span {
+  display: block;
+  margin-top: 4px;
+  color: #6a829b;
+  font-size: 13px;
+}
+
+.iso-code-empty {
+  color: #55708b;
+  padding: 18px;
+  text-align: center;
+}
+
 .hot-shell {
   display: grid;
   gap: 14px;

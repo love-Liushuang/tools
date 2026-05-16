@@ -3,6 +3,13 @@ import ToolPageShell from '../components/ToolPageShell';
 function ChangelogPage () {
     const entries = [
         {
+            version: 'v1.14.2',
+            date: '2026-05-16',
+            items: [
+                'ISO 代码查询 工具上线：支持查询全球国家/地区 ISO 二字、三字、数字代码，并提供七大洲代码与中英文名称。',
+            ],
+        },
+        {
             version: 'v1.14.1',
             date: '2026-05-14',
             items: [
