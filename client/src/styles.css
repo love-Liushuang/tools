@@ -1046,6 +1046,129 @@ a {
   border: 0;
 }
 
+.desktop-download-page {
+  display: grid;
+  gap: 14px;
+}
+
+.desktop-download-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  border: 1px solid #dbe8f5;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f4faff 0%, #ffffff 56%, #f3fff7 100%);
+  padding: 18px;
+}
+
+.desktop-download-tag {
+  display: inline-block;
+  margin: 0 0 10px;
+  border-radius: 999px;
+  background: #e1f0ff;
+  color: #1059aa;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.desktop-download-hero h2 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.desktop-download-hero p:last-child {
+  margin: 8px 0 0;
+  color: #4b6480;
+  line-height: 1.7;
+}
+
+.desktop-download-badge {
+  border: 1px solid #c9ddf0;
+  border-radius: 999px;
+  background: #fff;
+  color: #255880;
+  padding: 9px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.desktop-download-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border: 1px solid #e2ebf5;
+  border-radius: 12px;
+  background: #f8fbff;
+  padding: 16px;
+}
+
+.desktop-download-panel h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.desktop-download-panel p {
+  margin: 8px 0 0;
+  color: #58708a;
+  line-height: 1.6;
+}
+
+.desktop-download-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  border: 0;
+  border-radius: 8px;
+  background: #1d7add;
+  color: #fff;
+  padding: 8px 14px;
+  text-align: center;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.desktop-download-info {
+  border: 1px solid #e2ebf5;
+  border-radius: 12px;
+  background: #f9fbff;
+  padding: 14px;
+}
+
+.desktop-download-info h3 {
+  margin: 0 0 10px;
+  font-size: 16px;
+  color: #274a6d;
+}
+
+.desktop-download-info ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.desktop-download-info li {
+  margin-bottom: 7px;
+  color: #3a5a7a;
+  line-height: 1.6;
+}
+
+@media (max-width: 720px) {
+  .desktop-download-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .desktop-download-badge {
+    width: fit-content;
+  }
+}
+
 textarea {
   width: 100%;
   resize: vertical;

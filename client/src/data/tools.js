@@ -180,6 +180,13 @@ export const tools = [
         path: '/tools/webshot'
     },
     {
+        id: 'web-image-extractor',
+        name: '网页图片提取器',
+        desc: '下载桌面端应用，在本地提取网页渲染后的图片并批量保存。',
+        category: 'image',
+        path: '/tools/web-image-extractor'
+    },
+    {
         id: 'video-to-gif',
         name: '视频转 GIF / WebP（多线程）',
         desc: '本地视频转 GIF 或 Animated WebP，多线程版本，速度更快。',

@@ -3,6 +3,13 @@ import ToolPageShell from '../components/ToolPageShell';
 function ChangelogPage () {
     const entries = [
         {
+            version: 'v1.14.3',
+            date: '2026-05-31',
+            items: [
+                '网页图片提取器上线。',
+            ],
+        },
+        {
             version: 'v1.14.2',
             date: '2026-05-16',
             items: [

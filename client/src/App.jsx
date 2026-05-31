@@ -16,6 +16,7 @@ import SvgBase64Page from './pages/SvgBase64Page';
 import SvgPathPage from './pages/SvgPathPage';
 import SvgPreviewPage from './pages/SvgPreviewPage';
 import WebshotPage from './pages/WebshotPage';
+import WebImageExtractorDownloadPage from './pages/WebImageExtractorDownloadPage';
 import VideoToGifPage from './pages/VideoToGifPage';
 import VideoToGifSinglePage from './pages/VideoToGifSinglePage';
 import FileEncryptPage from './pages/FileEncryptPage';
@@ -106,6 +107,8 @@ function App() {
             <Route path="svg-preview" element={<Navigate to="/tools/svg-preview" replace />} />
             <Route path="SVG预览" element={<Navigate to="/tools/svg-preview" replace />} />
             <Route path="SVG图片预览" element={<Navigate to="/tools/svg-preview" replace />} />
+            <Route path="web-image-extractor" element={<Navigate to="/tools/web-image-extractor" replace />} />
+            <Route path="网页图片提取器" element={<Navigate to="/tools/web-image-extractor" replace />} />
             <Route path="urlencode" element={<Navigate to="/tools/url-codec" replace />} />
             <Route path="urldecode" element={<Navigate to="/tools/url-codec" replace />} />
             <Route path="URL编码" element={<Navigate to="/tools/url-codec" replace />} />
@@ -196,6 +199,7 @@ function App() {
             <Route path="tools/svg-path" element={<SvgPathPage />} />
             <Route path="tools/svg-preview" element={<SvgPreviewPage />} />
             <Route path="tools/webshot" element={<WebshotPage />} />
+            <Route path="tools/web-image-extractor" element={<WebImageExtractorDownloadPage />} />
             <Route path="tools/getgzhtoutu" element={<WechatCoverPage />} />
             <Route path="tools/video-to-gif" element={<VideoToGifPage />} />
             <Route path="tools/video-to-gif-single" element={<VideoToGifSinglePage />} />
