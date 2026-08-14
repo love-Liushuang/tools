@@ -258,6 +258,11 @@
     "@napi-rs/canvas-win32-arm64-msvc" "0.1.97"
     "@napi-rs/canvas-win32-x64-msvc" "0.1.97"
 
+"@noble/ciphers@^2.3.0":
+  "integrity" "sha512-Clu/xdfgVTf9o7ngLOURaxePwR0j8sjclKEtVij10/jGulwFsPWCvvRgG/XjUVf8Nei+jLG6uwyXzUTGY1DQrw=="
+  "resolved" "https://registry.npmjs.org/@noble/ciphers/-/ciphers-2.3.0.tgz"
+  "version" "2.3.0"
+
 "@remix-run/router@1.23.2":
   "integrity" "sha512-Ic6m2U/rMjTkhERIa/0ZtXJP17QUi2CbWE7cqx4J58M8aA3QTfW+2UlQ4psvTX9IO1RfNVhK3pcpdjej7L+t2w=="
   "resolved" "https://registry.npmjs.org/@remix-run/router/-/router-1.23.2.tgz"

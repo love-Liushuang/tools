@@ -3,6 +3,14 @@ import ToolPageShell from '../components/ToolPageShell';
 function ChangelogPage () {
     const entries = [
         {
+            version: 'v1.15.0',
+            date: '2026-08-14',
+            items: [
+                'NCM 转 MP3 工具上线：支持浏览器本地批量解密、歌曲信息与封面写入，以及 MP3 无损直出。',
+                '兼容 NCM 内部 FLAC、AAC 和 OGG 音频，可按所选比特率在本地转码为 MP3。',
+            ],
+        },
+        {
             version: 'v1.14.3',
             date: '2026-05-31',
             items: [

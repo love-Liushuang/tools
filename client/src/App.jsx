@@ -36,6 +36,7 @@ import ChangelogPage from './pages/ChangelogPage';
 const InvoiceRenamePage = lazy(() => import('./pages/InvoiceRenamePage'));
 const InvoiceDedupPage = lazy(() => import('./pages/InvoiceDedupPage'));
 const InvoiceLedgerPage = lazy(() => import('./pages/InvoiceLedgerPage'));
+const NcmToMp3Page = lazy(() => import('./pages/NcmToMp3Page'));
 
 function shouldCheckAdBlock(pathname) {
   const normalizedPath = pathname.replace(/\/+$/, '') || '/';
@@ -115,6 +116,7 @@ function App() {
             <Route path="URL解码" element={<Navigate to="/tools/url-codec" replace />} />
             <Route path="iso-codes" element={<Navigate to="/tools/iso-codes" replace />} />
             <Route path="ISO代码查询" element={<Navigate to="/tools/iso-codes" replace />} />
+            <Route path="ncm-to-mp3" element={<Navigate to="/tools/ncm-to-mp3" replace />} />
             <Route path="tools/json-formatter" element={<JsonFormatterPage />} />
             <Route path="tools/url-codec" element={<UrlCodecPage />} />
             <Route path="tools/urlencode" element={<Navigate to="/tools/url-codec" replace />} />
@@ -203,6 +205,14 @@ function App() {
             <Route path="tools/getgzhtoutu" element={<WechatCoverPage />} />
             <Route path="tools/video-to-gif" element={<VideoToGifPage />} />
             <Route path="tools/video-to-gif-single" element={<VideoToGifSinglePage />} />
+            <Route
+              path="tools/ncm-to-mp3"
+              element={(
+                <LazyPage>
+                  <NcmToMp3Page />
+                </LazyPage>
+              )}
+            />
             <Route path="tools/torrent-magnet" element={<TorrentMagnetPage />} />
             <Route path="tools/markdown-editor" element={<MarkdownEditorPage />} />
             <Route path="tools/md5" element={<Md5Page />} />

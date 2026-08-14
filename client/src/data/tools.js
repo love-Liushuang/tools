@@ -3,6 +3,7 @@ export const categories = [
     { key: 'invoice', label: '发票工具' },
     { key: 'image', label: '图片处理' },
     { key: 'video', label: '视频处理' },
+    { key: 'audio', label: '音频处理' },
     { key: 'text', label: '文本处理' },
     { key: 'wps', label: '文档 / PDF' },
     { key: 'encode', label: '编码转换' },
@@ -199,6 +200,13 @@ export const tools = [
         desc: '本地视频转 GIF 或 Animated WebP，单线程版本，兼容要求更低。',
         category: ['video', 'image'],
         path: '/tools/video-to-gif-single'
+    },
+    {
+        id: 'ncm-to-mp3',
+        name: 'NCM 转 MP3',
+        desc: '浏览器本地批量解密 NCM，保留歌曲信息并导出通用 MP3。',
+        category: ['audio', 'encode'],
+        path: '/tools/ncm-to-mp3'
     },
     {
         id: 'md5',
