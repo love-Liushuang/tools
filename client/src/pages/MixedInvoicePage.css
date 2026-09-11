@@ -1,0 +1,19 @@
+.mixed-invoice .invoice-panel {
+  max-height: none;
+  gap: 14px;
+}
+
+.mixed-invoice .invoice-action-bar {
+  align-items: stretch;
+  flex-direction: column;
+}
+
+.mixed-invoice .invoice-panel > p {
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .mixed-invoice .invoice-action-bar {
+    align-items: stretch;
+  }
+}

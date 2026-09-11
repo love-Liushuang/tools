@@ -36,6 +36,7 @@ import ChangelogPage from './pages/ChangelogPage';
 const InvoiceRenamePage = lazy(() => import('./pages/InvoiceRenamePage'));
 const InvoiceDedupPage = lazy(() => import('./pages/InvoiceDedupPage'));
 const InvoiceLedgerPage = lazy(() => import('./pages/InvoiceLedgerPage'));
+const MixedInvoicePage = lazy(() => import('./pages/MixedInvoicePage'));
 const NcmToMp3Page = lazy(() => import('./pages/NcmToMp3Page'));
 
 function shouldCheckAdBlock(pathname) {
@@ -129,6 +130,14 @@ function App() {
             <Route path="tools/text-letter" element={<TextLetterPage />} />
             <Route path="tools/txt-diff" element={<TextDiffPage />} />
             <Route path="tools/unlock-pdf" element={<UnlockPdfPage />} />
+            <Route
+              path="tools/invoice-pdf-rename-mixed"
+              element={<LazyPage><MixedInvoicePage key="mixed-rename" mode="rename" /></LazyPage>}
+            />
+            <Route
+              path="tools/invoice-ledger-export-mixed"
+              element={<LazyPage><MixedInvoicePage key="mixed-ledger" mode="ledger" /></LazyPage>}
+            />
             <Route
               path="tools/invoice-pdf-rename"
               element={<Navigate to="/tools/invoice-pdf-rename-standard" replace />}

@@ -3,6 +3,13 @@ import ToolPageShell from '../components/ToolPageShell';
 function ChangelogPage () {
     const entries = [
         {
+            version: 'v1.16.0',
+            date: '2026-09-11',
+            items: [
+                '',
+            ],
+        },
+        {
             version: 'v1.15.0',
             date: '2026-08-14',
             items: [

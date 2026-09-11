@@ -1,3 +1,4 @@
+import { validateMixedInvoice } from './mixedInvoice';
 import { isAirlineInvoice, parseAirlineInvoice } from './airlineInvoice';
 import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import pdfWorkerUrl from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
@@ -1506,7 +1507,7 @@ function parseTrainInvoice(lines, fullText) {
   };
 }
 
-export async function extractInvoiceFromPdf(file) {
+export async function extractInvoiceFromPdf(file, options = {}) {
   const buffer = await file.arrayBuffer();
   const loadingTask = getDocument({
     data: new Uint8Array(buffer),
@@ -1536,13 +1537,14 @@ export async function extractInvoiceFromPdf(file) {
       if (pdf.numPages !== 1) {
         throw new Error('飞机票暂支持单页行程单，请将多页 PDF 按票据拆分后上传。');
       }
-      return parseAirlineInvoice(lines);
+      const result = parseAirlineInvoice(lines);
+      return options.strict ? validateMixedInvoice(result, fullText) : result;
     }
 
     if (detectTrainInvoice(lines, fullText)) {
       const trainResult = parseTrainInvoice(lines, fullText);
       if (Object.values(trainResult).some(Boolean)) {
-        return trainResult;
+        return options.strict ? validateMixedInvoice(trainResult, fullText) : trainResult;
       }
     }
 
@@ -1578,7 +1580,7 @@ export async function extractInvoiceFromPdf(file) {
       throw new Error('未识别到发票字段，当前仅支持可提取文本的 PDF 电子发票。');
     }
 
-    return result;
+    return options.strict ? validateMixedInvoice(result, fullText) : result;
   } catch (error) {
     if (error?.name === 'PasswordException') {
       throw new Error('PDF 已加密，当前版本暂不支持解析加密发票。');

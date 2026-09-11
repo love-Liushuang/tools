@@ -97,6 +97,22 @@ export const tools = [
         path: '/tools/unlock-pdf'
     },
     {
+        id: 'invoice-pdf-rename-mixed',
+        icon: renameIcon,
+        name: '批量重命名与金额汇总（混合票据）',
+        desc: '普通发票、火车票、飞机票混合上传，按类型重命名、汇总金额并统一打包。',
+        category: ['invoice', 'wps'],
+        path: '/tools/invoice-pdf-rename-mixed'
+    },
+    {
+        id: 'invoice-ledger-export-mixed',
+        icon: ledgerIcon,
+        name: '台账导出（混合票据）',
+        desc: '选择文件夹自动分类，一份 Excel 导出汇总、三类票据明细和未成功处理记录。',
+        category: ['invoice', 'wps'],
+        path: '/tools/invoice-ledger-export-mixed'
+    },
+    {
         id: 'invoice-pdf-rename-standard',
         icon: renameIcon,
         typeIcon: invoiceIcon,
@@ -266,13 +282,9 @@ export const tools = [
 ];
 
 export const featuredToolIds = [
-    'invoice-pdf-rename-standard',
-    'invoice-pdf-rename-train',
-    'invoice-pdf-rename-airline',
+    'invoice-pdf-rename-mixed',
+    'invoice-ledger-export-mixed',
     'invoice-pdf-dedup',
-    'invoice-ledger-export-standard',
-    'invoice-ledger-export-train',
-    'invoice-ledger-export-airline',
     'getgzhtoutu',
     'webshot',
     'common-symbols',
