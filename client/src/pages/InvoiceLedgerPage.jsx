@@ -33,14 +33,14 @@ const STATUS_LABEL_MAP = {
   error: '失败'
 };
 
-const MIXED_INVOICE_TYPE_MESSAGE = '检测到普通发票和火车票混合上传，请分开操作。';
+const MIXED_INVOICE_TYPE_MESSAGE = '检测到不同类型票据混合上传，请按普通发票、火车票、飞机票分开操作。';
 
 function getInvoiceTypeLabel(invoiceTypeKey) {
-  return invoiceTypeKey === 'train' ? '火车票' : '普通发票';
+  return { standard: '普通发票', train: '火车票', airline: '飞机票' }[invoiceTypeKey] || '普通发票';
 }
 
 function getInvoiceTypeToolLabel(invoiceTypeKey) {
-  return invoiceTypeKey === 'train' ? '火车票工具' : '普通发票工具';
+  return `${getInvoiceTypeLabel(invoiceTypeKey)}工具`;
 }
 
 function collectRecognizedInvoiceTypes(items) {
@@ -53,7 +53,7 @@ function collectRecognizedInvoiceTypes(items) {
 
 function hasMixedInvoiceTypes(items) {
   const recognizedTypes = collectRecognizedInvoiceTypes(items);
-  return recognizedTypes.includes('train') && recognizedTypes.includes('standard');
+  return recognizedTypes.length > 1;
 }
 
 function getInvoiceTypeMismatchMessage(expectedInvoiceTypeKey, recognizedTypes) {
@@ -69,7 +69,7 @@ function getInvoiceTypeMismatchMessage(expectedInvoiceTypeKey, recognizedTypes) 
     return MIXED_INVOICE_TYPE_MESSAGE;
   }
 
-  const targetType = recognizedTypes[0] === 'train' ? 'train' : 'standard';
+  const targetType = recognizedTypes[0];
   return `当前工具仅支持${getInvoiceTypeLabel(expectedInvoiceTypeKey)}，请改用${getInvoiceTypeToolLabel(targetType)}。`;
 }
 
@@ -568,7 +568,7 @@ function InvoiceLedgerPage({
 
             <div className="invoice-preview-box">
               <span>当前发票类型</span>
-              <strong>{activeInvoiceTypeKey === 'train' ? '火车发票' : '常规发票'}</strong>
+              <strong>{getInvoiceTypeLabel(activeInvoiceTypeKey)}</strong>
             </div>
 
             <div className="invoice-preview-box">

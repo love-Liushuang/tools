@@ -350,6 +350,47 @@ a {
   margin: 0;
 }
 
+.tool-entry-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tool-entry-heading h3 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.tool-entry-icons {
+  position: relative;
+  flex: 0 0 58px;
+  width: 58px;
+  height: 56px;
+}
+
+.tool-entry-icon {
+  display: block;
+  width: 40px;
+  height: 40px;
+  margin: 3px;
+  object-fit: contain;
+}
+
+.tool-entry-type-icon {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  box-sizing: content-box;
+  width: 24px;
+  height: 24px;
+  padding: 3px;
+  border: 1px solid #e2eaf3;
+  border-radius: 10px;
+  background: #fff;
+  object-fit: contain;
+  box-shadow: 0 2px 5px rgba(16, 67, 111, 0.06);
+}
+
 .tool-item p {
   margin: 8px 0 12px;
   color: #58708a;

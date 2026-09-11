@@ -1,3 +1,10 @@
+import renameIcon from '../assets/tool-icons/rename.svg';
+import planeIcon from '../assets/tool-icons/plane.svg';
+import dedupIcon from '../assets/tool-icons/stat-pdf.svg';
+import trainIcon from '../assets/tool-icons/ticket.svg';
+import ledgerIcon from '../assets/tool-icons/store.svg';
+import invoiceIcon from '../assets/tool-icons/invoice.svg';
+
 export const categories = [
     { key: 'all', label: '全部工具' },
     { key: 'invoice', label: '发票工具' },
@@ -91,13 +98,26 @@ export const tools = [
     },
     {
         id: 'invoice-pdf-rename-standard',
+        icon: renameIcon,
+        typeIcon: invoiceIcon,
         name: '批量重命名与金额汇总（PDF电子发票）',
         desc: '本地批量解析普通电子发票，支持金额汇总、重命名并打包下载。',
         category: ['invoice', 'wps'],
         path: '/tools/invoice-pdf-rename-standard'
     },
     {
+        id: 'invoice-pdf-rename-airline',
+        icon: renameIcon,
+        typeIcon: planeIcon,
+        name: '批量重命名与金额汇总（飞机票）',
+        desc: '本地批量解析航空运输电子客票行程单，支持金额汇总、重命名并打包下载。',
+        category: ['invoice', 'wps'],
+        path: '/tools/invoice-pdf-rename-airline'
+    },
+    {
         id: 'invoice-pdf-rename-train',
+        icon: renameIcon,
+        typeIcon: trainIcon,
         name: '批量重命名与金额汇总（火车票）',
         desc: '本地批量解析铁路电子客票，支持票价汇总、重命名并打包下载。',
         category: ['invoice', 'wps'],
@@ -105,6 +125,7 @@ export const tools = [
     },
     {
         id: 'invoice-pdf-dedup',
+        icon: dedupIcon,
         name: 'PDF 电子发票批量去重',
         desc: '本地批量识别电子发票并统计重复，支持下载去重后的发票压缩包。',
         category: ['invoice', 'wps'],
@@ -112,13 +133,26 @@ export const tools = [
     },
     {
         id: 'invoice-ledger-export-standard',
+        icon: ledgerIcon,
+        typeIcon: invoiceIcon,
         name: '台账导出（PDF电子发票）',
         desc: '本地批量识别普通电子发票并导出 Excel 台账，支持自选导出列。',
         category: ['invoice', 'wps'],
         path: '/tools/invoice-ledger-export-standard'
     },
     {
+        id: 'invoice-ledger-export-airline',
+        icon: ledgerIcon,
+        typeIcon: planeIcon,
+        name: '台账导出（飞机票）',
+        desc: '本地批量解析航空运输电子客票行程单，支持自选字段导出 Excel 台账。',
+        category: ['invoice', 'wps'],
+        path: '/tools/invoice-ledger-export-airline'
+    },
+    {
         id: 'invoice-ledger-export-train',
+        icon: ledgerIcon,
+        typeIcon: trainIcon,
         name: '台账导出（火车票）',
         desc: '本地批量识别铁路电子客票并导出 Excel 台账，支持自选导出列。',
         category: ['invoice', 'wps'],
@@ -234,9 +268,11 @@ export const tools = [
 export const featuredToolIds = [
     'invoice-pdf-rename-standard',
     'invoice-pdf-rename-train',
+    'invoice-pdf-rename-airline',
     'invoice-pdf-dedup',
     'invoice-ledger-export-standard',
     'invoice-ledger-export-train',
+    'invoice-ledger-export-airline',
     'getgzhtoutu',
     'webshot',
     'common-symbols',

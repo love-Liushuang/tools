@@ -162,6 +162,27 @@ export const INVOICE_FIELD_MAP = {
     kind: 'text',
     sample: '41270119******0533'
   },
+  electronicTicketNumber: { key: 'electronicTicketNumber', label: '电子客票号码', kind: 'text', sample: '7810000000000' },
+  airlinePassengerName: { key: 'airlinePassengerName', label: '旅客姓名', kind: 'text', sample: '张三' },
+  airlinePassengerIdNumber: { key: 'airlinePassengerIdNumber', label: '有效身份证件号码', kind: 'text', sample: '110101********123X' },
+  departureAirport: { key: 'departureAirport', label: '出发地', kind: 'text', sample: '哈尔滨太平' },
+  arrivalAirport: { key: 'arrivalAirport', label: '到达地', kind: 'text', sample: '上海浦东' },
+  flightDate: { key: 'flightDate', label: '乘机日期', kind: 'text', sample: '20260804' },
+  flightTime: { key: 'flightTime', label: '起飞时间', kind: 'text', sample: '08:50' },
+  carrier: { key: 'carrier', label: '承运人', kind: 'text', sample: '东航' },
+  flightNumber: { key: 'flightNumber', label: '航班号', kind: 'text', sample: 'MU2338' },
+  cabinClass: { key: 'cabinClass', label: '座位等级', kind: 'text', sample: 'N' },
+  fareBasis: { key: 'fareBasis', label: '客票级别', kind: 'text', sample: 'N' },
+  fuelSurcharge: { key: 'fuelSurcharge', label: '燃油附加费', kind: 'amount', sample: '91.74' },
+  aviationFund: { key: 'aviationFund', label: '民航发展基金', kind: 'amount', sample: '50.00' },
+  otherTaxes: { key: 'otherTaxes', label: '其他税费', kind: 'amount', sample: '0.00' },
+  insuranceAmount: { key: 'insuranceAmount', label: '保险费', kind: 'amount', sample: '0.00' },
+  taxRate: { key: 'taxRate', label: '增值税税率', kind: 'text', sample: '9%' },
+  invoiceStatus: { key: 'invoiceStatus', label: '开票状态', kind: 'text', sample: '正常' },
+  travelType: { key: 'travelType', label: '国内国际标识', kind: 'text', sample: '国内' },
+  salesOutlet: { key: 'salesOutlet', label: '销售网点代号', kind: 'text', sample: 'SHA177/08677777' },
+  freeBaggage: { key: 'freeBaggage', label: '免费行李', kind: 'text', sample: '20K' },
+  verificationCode: { key: 'verificationCode', label: '验证码', kind: 'text', sample: '0555' },
   customContent: {
     key: 'customContent',
     label: '自定义内容',
@@ -207,6 +228,43 @@ export const INVOICE_TYPE_MAP = {
       'ticketPrice',
       'trainPassengerName',
       'trainPassengerIdNumber',
+      'customContent'
+    ]
+  },
+  airline: {
+    key: 'airline',
+    label: '飞机票',
+    fields: [
+      'invoiceNumber',
+      'flightDate',
+      'buyerName',
+      'sellerName',
+      'totalAmount',
+      'departureAirport',
+      'arrivalAirport',
+      'airlinePassengerName',
+      'electronicTicketNumber',
+      'issueDate',
+      'flightTime',
+      'carrier',
+      'flightNumber',
+      'cabinClass',
+      'fareBasis',
+      'freeBaggage',
+      'airlinePassengerIdNumber',
+      'ticketPrice',
+      'fuelSurcharge',
+      'taxRate',
+      'taxAmount',
+      'aviationFund',
+      'otherTaxes',
+      'insuranceAmount',
+      'buyerTaxId',
+      'remarks',
+      'invoiceStatus',
+      'travelType',
+      'salesOutlet',
+      'verificationCode',
       'customContent'
     ]
   }
@@ -428,7 +486,9 @@ export function createDefaultRuleProfile(invoiceTypeKey) {
       // For standard invoice use DEFAULT_SELECTED_FIELDS, otherwise enable by default
       const enabledDefault = invoiceType.key === DEFAULT_INVOICE_TYPE
         ? DEFAULT_SELECTED_FIELDS.includes(fieldKey)
-        : (fieldKey !== 'customContent');
+        : invoiceType.key === 'airline'
+          ? ['invoiceNumber', 'flightDate', 'buyerName', 'sellerName', 'totalAmount'].includes(fieldKey)
+          : (fieldKey !== 'customContent');
       return {
         key: fieldKey,
         enabled: enabledDefault,

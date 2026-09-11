@@ -12,6 +12,22 @@ function getToolCategoryKeys(tool) {
   return raw ? [raw] : [];
 }
 
+function ToolEntryHeading({ tool }) {
+  if (!tool.icon) return <h3>{tool.name}</h3>;
+
+  return (
+    <div className="tool-entry-heading">
+      <div className="tool-entry-icons" aria-hidden="true">
+        <img className="tool-entry-icon" src={tool.icon} alt="" width="40" height="40" />
+        {tool.typeIcon ? (
+          <img className="tool-entry-type-icon" src={tool.typeIcon} alt="" width="24" height="24" />
+        ) : null}
+      </div>
+      <h3>{tool.name}</h3>
+    </div>
+  );
+}
+
 function HomePage() {
   const [activeCategory, setActiveCategory] = useState('all');
   const [featuredExpanded, setFeaturedExpanded] = useState(false);
@@ -89,7 +105,7 @@ function HomePage() {
           <div className="tool-grid">
             {visibleFeaturedTools.map((tool) => (
               <Link className="tool-item" key={`featured-${tool.id}`} to={tool.path}>
-                <h3>{tool.name}</h3>
+                <ToolEntryHeading tool={tool} />
                 <p>{tool.desc}</p>
                 <span>立即使用</span>
               </Link>
@@ -132,7 +148,7 @@ function HomePage() {
         <section className="tool-grid">
           {visibleTools.map((tool) => (
             <Link className="tool-item" key={tool.id} to={tool.path}>
-              <h3>{tool.name}</h3>
+              <ToolEntryHeading tool={tool} />
               <p>{tool.desc}</p>
               <span>立即使用</span>
             </Link>

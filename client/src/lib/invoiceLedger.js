@@ -52,6 +52,27 @@ export const DEFAULT_TRAIN_LEDGER_FIELD_KEYS = [
 ];
 
 const LEDGER_TYPE_DEFAULTS = {
+  airline: [
+    'sequence',
+    'invoiceNumber',
+    'electronicTicketNumber',
+    'issueDate',
+    'airlinePassengerName',
+    'flightDate',
+    'flightTime',
+    'departureAirport',
+    'arrivalAirport',
+    'flightNumber',
+    'ticketPrice',
+    'fuelSurcharge',
+    'taxAmount',
+    'aviationFund',
+    'otherTaxes',
+    'totalAmount',
+    'buyerName',
+    'duplicateStatus',
+    'exportTime'
+  ],
   standard: DEFAULT_LEDGER_FIELD_KEYS,
   train: DEFAULT_TRAIN_LEDGER_FIELD_KEYS
 };

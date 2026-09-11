@@ -1,3 +1,4 @@
+import { isAirlineInvoice, parseAirlineInvoice } from './airlineInvoice';
 import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import pdfWorkerUrl from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
 import cMapGbUrl from 'pdfjs-dist/cmaps/UniGB-UCS2-H.bcmap?url';
@@ -1529,6 +1530,13 @@ export async function extractInvoiceFromPdf(file) {
     const fullText = lines.map((line) => line.compact).join('\n');
     if (!fullText) {
       throw new Error('未识别到文本内容，可能是扫描件、图片版 PDF 或受保护文件。');
+    }
+
+    if (isAirlineInvoice(fullText)) {
+      if (pdf.numPages !== 1) {
+        throw new Error('飞机票暂支持单页行程单，请将多页 PDF 按票据拆分后上传。');
+      }
+      return parseAirlineInvoice(lines);
     }
 
     if (detectTrainInvoice(lines, fullText)) {

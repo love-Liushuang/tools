@@ -68,17 +68,17 @@ function collectRecognizedInvoiceTypes(items) {
 
 function hasMixedInvoiceTypes(items) {
   const recognizedTypes = collectRecognizedInvoiceTypes(items);
-  return recognizedTypes.includes('train') && recognizedTypes.includes('standard');
+  return recognizedTypes.length > 1;
 }
 
-const MIXED_INVOICE_TYPE_MESSAGE = '检测到普通发票和火车票混合上传，请分开操作。';
+const MIXED_INVOICE_TYPE_MESSAGE = '检测到不同类型票据混合上传，请按普通发票、火车票、飞机票分开操作。';
 
 function getInvoiceTypeLabel(invoiceTypeKey) {
-  return invoiceTypeKey === 'train' ? '火车票' : '普通发票';
+  return { standard: '普通发票', train: '火车票', airline: '飞机票' }[invoiceTypeKey] || '普通发票';
 }
 
 function getInvoiceTypeToolLabel(invoiceTypeKey) {
-  return invoiceTypeKey === 'train' ? '火车票工具' : '普通发票工具';
+  return `${getInvoiceTypeLabel(invoiceTypeKey)}工具`;
 }
 
 function getInvoiceTypeMismatchMessage(expectedInvoiceTypeKey, recognizedTypes) {
@@ -94,7 +94,7 @@ function getInvoiceTypeMismatchMessage(expectedInvoiceTypeKey, recognizedTypes) 
     return MIXED_INVOICE_TYPE_MESSAGE;
   }
 
-  const targetType = recognizedTypes[0] === 'train' ? 'train' : 'standard';
+  const targetType = recognizedTypes[0];
   return `当前工具仅支持${getInvoiceTypeLabel(expectedInvoiceTypeKey)}，请改用${getInvoiceTypeToolLabel(targetType)}。`;
 }
 
@@ -117,7 +117,7 @@ function InvoiceRenamePage({
   const [items, setItems] = useState([]);
   const [ruleFields, setRuleFields] = useState(DEFAULT_RULE_FIELDS);
   const [showRuleSettings, setShowRuleSettings] = useState(false);
-  const [activeProfile, setActiveProfile] = useState(null);
+  const [activeProfile, setActiveProfile] = useState(() => fixedInvoiceTypeKey === 'airline' ? createDefaultRuleProfile('airline') : null);
   const [separator, setSeparator] = useState(DEFAULT_SEPARATOR);
   const [isDragging, setIsDragging] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -161,9 +161,10 @@ function InvoiceRenamePage({
   }, [activeProfile, fixedInvoiceTypeKey, ruleFields, separator]);
   const amountSummary = useMemo(() => {
     const rows = items.map((item, index) => {
-      const invoiceAmount = parseAmountNumber(getInvoiceAmountValue(item.invoiceData));
-      const taxAmount = parseAmountNumber(item.invoiceData?.taxAmount);
-      const totalAmount = parseAmountNumber(item.invoiceData?.totalAmount);
+      const readAmount = (value) => fixedInvoiceTypeKey === 'airline' && (value === '' || value === undefined || value === null) ? null : parseAmountNumber(value);
+      const invoiceAmount = readAmount(getInvoiceAmountValue(item.invoiceData));
+      const taxAmount = readAmount(item.invoiceData?.taxAmount);
+      const totalAmount = readAmount(item.invoiceData?.totalAmount);
       const ticketPrice = parseAmountNumber(item.invoiceData?.ticketPrice || getInvoiceAmountValue(item.invoiceData));
       return {
         id: item.id,
@@ -193,16 +194,24 @@ function InvoiceRenamePage({
         result.recognizedCount += 1;
       }
       if (row.invoiceAmount !== null) {
-        result.invoiceAmountTotal += row.invoiceAmount;
+        result.invoiceAmountTotal = fixedInvoiceTypeKey === 'airline'
+          ? (Math.round(result.invoiceAmountTotal * 100) + Math.round(row.invoiceAmount * 100)) / 100
+          : result.invoiceAmountTotal + row.invoiceAmount;
       }
       if (row.taxAmount !== null) {
-        result.taxAmountTotal += row.taxAmount;
+        result.taxAmountTotal = fixedInvoiceTypeKey === 'airline'
+          ? (Math.round(result.taxAmountTotal * 100) + Math.round(row.taxAmount * 100)) / 100
+          : result.taxAmountTotal + row.taxAmount;
       }
       if (row.totalAmount !== null) {
-        result.totalAmountTotal += row.totalAmount;
+        result.totalAmountTotal = fixedInvoiceTypeKey === 'airline'
+          ? (Math.round(result.totalAmountTotal * 100) + Math.round(row.totalAmount * 100)) / 100
+          : result.totalAmountTotal + row.totalAmount;
       }
       if (row.ticketPrice !== null) {
-        result.ticketPriceTotal += row.ticketPrice;
+        result.ticketPriceTotal = fixedInvoiceTypeKey === 'airline'
+          ? (Math.round(result.ticketPriceTotal * 100) + Math.round(row.ticketPrice * 100)) / 100
+          : result.ticketPriceTotal + row.ticketPrice;
       }
       return result;
     }, {
@@ -213,7 +222,7 @@ function InvoiceRenamePage({
       totalAmountTotal: 0,
       ticketPriceTotal: 0
     });
-  }, [items]);
+  }, [items, fixedInvoiceTypeKey]);
 
   useEffect(() => {
     setActiveProfile(createDefaultRuleProfile(fixedInvoiceTypeKey || DEFAULT_INVOICE_TYPE));
@@ -779,7 +788,7 @@ function InvoiceRenamePage({
           <div className="invoice-panel-head">
             <div>
               <h3>金额汇总</h3>
-              <p>逐张展示发票金额、发票税额和价税合计，并自动汇总当前已上传发票的金额。</p>
+              <p>{fixedInvoiceTypeKey === 'airline' ? '票价、税额和票据合计分别汇总；合计包含燃油附加费、民航发展基金及其他税费。保险费单列，不重复计入。' : '逐张展示发票金额、发票税额和价税合计，并自动汇总当前已上传发票的金额。'}</p>
             </div>
           </div>
 
@@ -808,7 +817,7 @@ function InvoiceRenamePage({
                 ) : (
                   <>
                     <div className="invoice-amount-summary-card">
-                      <span>发票金额合计</span>
+                      <span>{fixedInvoiceTypeKey === 'airline' ? '票价合计' : '发票金额合计'}</span>
                       <strong>{amountSummary.recognizedCount ? formatAmountNumber(amountSummary.invoiceAmountTotal) : '--'}</strong>
                     </div>
                     <div className="invoice-amount-summary-card">
@@ -821,6 +830,17 @@ function InvoiceRenamePage({
                     </div>
                   </>
                 )}
+                {fixedInvoiceTypeKey === 'airline' && [
+                  ['fuelSurcharge', '燃油附加费合计'],
+                  ['aviationFund', '民航发展基金合计'],
+                  ['otherTaxes', '其他税费合计'],
+                  ['insuranceAmount', '保险费合计（单列）']
+                ].map(([key, label]) => (
+                  <div className="invoice-amount-summary-card" key={key}>
+                    <span>{label}</span>
+                    <strong>{amountSummary.recognizedCount ? formatAmountNumber(items.reduce((sum, item) => sum + Math.round(Number(item.invoiceData?.[key] || 0) * 100), 0) / 100) : '--'}</strong>
+                  </div>
+                ))}
               </div>
 
               <div className="invoice-amount-table-wrap">
@@ -833,7 +853,7 @@ function InvoiceRenamePage({
                         <th scope="col">票价</th>
                       ) : (
                         <>
-                          <th scope="col">发票金额</th>
+                          <th scope="col">{fixedInvoiceTypeKey === 'airline' ? '票价' : '发票金额'}</th>
                           <th scope="col">发票税额</th>
                           <th scope="col">价税合计</th>
                         </>

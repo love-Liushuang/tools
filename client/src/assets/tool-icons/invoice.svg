@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+  <title>普通发票</title>
+  <path d="M17 5H40L51 16V55C51 57.209 49.209 59 47 59H17C14.791 59 13 57.209 13 55V9C13 6.791 14.791 5 17 5Z" fill="#C95252"/>
+  <path d="M40 5V12C40 14.209 41.791 16 44 16H51L40 5Z" fill="#EBAAAA"/>
+  <path d="M26 20L32 27L38 20M32 27V38M26 29H38M26 34H38" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M23 45H41M23 51H35" stroke="white" stroke-width="3" stroke-linecap="round"/>
+</svg>

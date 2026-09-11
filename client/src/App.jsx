@@ -146,6 +146,19 @@ function App() {
               )}
             />
             <Route
+              path="tools/invoice-pdf-rename-airline"
+              element={(
+                <LazyPage>
+                  <InvoiceRenamePage
+                    key="airline"
+                    fixedInvoiceTypeKey="airline"
+                    toolTitle="批量重命名与金额汇总（飞机票）"
+                    toolDesc="本地解析航空运输电子客票行程单，支持金额汇总、批量重命名和 ZIP 打包下载。"
+                  />
+                </LazyPage>
+              )}
+            />
+            <Route
               path="tools/invoice-pdf-rename-train"
               element={(
                 <LazyPage>
@@ -177,6 +190,19 @@ function App() {
                     fixedInvoiceTypeKey="standard"
                     toolTitle="台账导出（PDF电子发票）"
                     toolDesc="本地批量识别普通电子发票，按所选字段生成 Excel 台账，适合整理报销、归档和对账数据。"
+                  />
+                </LazyPage>
+              )}
+            />
+            <Route
+              path="tools/invoice-ledger-export-airline"
+              element={(
+                <LazyPage>
+                  <InvoiceLedgerPage
+                    key="airline"
+                    fixedInvoiceTypeKey="airline"
+                    toolTitle="台账导出（飞机票）"
+                    toolDesc="本地批量识别航空运输电子客票行程单，按所选字段生成 Excel 台账。"
                   />
                 </LazyPage>
               )}
